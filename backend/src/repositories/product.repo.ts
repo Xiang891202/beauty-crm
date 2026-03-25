@@ -49,16 +49,33 @@ export const createProduct = async (data: Omit<Product, 'id' | 'created_at' | 'u
 //更新商品
 export const updateProduct = async (id: number, data: Partial<Omit<Product, 'id' | 'created_at'>>): Promise<Product | null> => {
   // 動態組合 SET 子句，只更新有傳入的欄位   // 使用 $1, $2, ... 佔位符
-  const res = await pool.query(
-    `UPDATE products
-   SET name = $1, price = $2, updated_at = CURRENT_TIMESTAMP
-   WHERE id = $3
-   RETURNING *`,
-    [data.name, data.price, id]
-  );
-  // 最後用 RETURNING * 回傳更新後的記錄
-  return res.rows[0] || null;
-  // throw new Error('Not implemented');
+  const fields: string[] = [];
+  const values: any[] = [];
+  let idx = 1;
+
+  // 动态构建 SET 子句
+  for (const [key, value] of Object.entries(data)) {
+    if (value !== undefined) {
+      fields.push(`${key} = $${idx}`);
+      values.push(value);
+      idx++;
+    }
+  }
+
+  if (fields.length === 0) {
+    // 没有要更新的字段，直接返回现有记录
+    const res = await pool.query('SELECT * FROM products WHERE id = $1', [id]);
+    return res.rows[0] || null;
+  }
+
+  // 自动更新 updated_at
+  fields.push(`updated_at = CURRENT_TIMESTAMP`);
+
+  const query = `UPDATE products SET ${fields.join(', ')} WHERE id = $${idx} RETURNING *`;
+  values.push(id);
+
+  const result = await pool.query(query, values);
+  return result.rows[0] || null;
 };
 
 

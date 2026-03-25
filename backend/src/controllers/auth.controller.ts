@@ -1,22 +1,25 @@
 import { Request, Response } from 'express';
 import * as authService from '../services/auth.service';
 import { successResponse, errorResponse } from '../utils/response';
+import { loginSchema } from '../validators/auth.validator';
 
 export const login = async (req: Request, res: Response) => {
   try {
     const { email, password } = req.body;
     const result = await authService.login(email, password);
-    successResponse(res, result);
+    res.json(successResponse(result));
   } catch (err: any) {
-    errorResponse(res, err.message, 401);
+    const status = err.status || 401;
+    res.status(status).json(errorResponse(err.message, status));
   }
 };
 
 export const register = async (req: Request, res: Response) => {
   try {
     const result = await authService.register(req.body);
-    successResponse(res, result, 201);
+    res.status(201).json(successResponse(result));
   } catch (err: any) {
-    errorResponse(res, err.message, 400);
+    const status = err.status || 400;
+    res.status(status).json(errorResponse(err.message, status));
   }
 };

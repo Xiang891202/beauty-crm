@@ -5,10 +5,10 @@ import { successResponse, errorResponse } from '../utils/response';
 export const getMembers = async (req: Request, res: Response) => {
   try {
     const members = await memberService.getAllMembers();
-    successResponse(res, members);
+    res.json(successResponse(members));
   } catch (err) {
     console.error('Error in getMembers:', err);
-    errorResponse(res, 'Failed to fetch members');
+    res.status(500).json(errorResponse('Failed to fetch members', 500));
   }
 };
 
@@ -16,21 +16,23 @@ export const getMember = async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id));
     const member = await memberService.getMember(id);
-    if (!member) return errorResponse(res, 'Member not found', 404);
-    successResponse(res, member);
+    if (!member) {
+      return res.status(404).json(errorResponse('Member not found', 404));
+    }
+    res.json(successResponse(member));
   } catch (err) {
     console.error('Error in getMember:', err);
-    errorResponse(res, 'Failed to fetch member');
+    res.status(500).json(errorResponse('Failed to fetch member', 500));
   }
 };
 
 export const createMember = async (req: Request, res: Response) => {
   try {
     const member = await memberService.addMember(req.body);
-    successResponse(res, member, 201);
+    res.status(201).json(successResponse(member));
   } catch (err) {
     console.error('Error in createMember:', err);
-    errorResponse(res, 'Failed to create member');
+    res.status(500).json(errorResponse('Failed to create member', 500));
   }
 };
 
@@ -38,11 +40,13 @@ export const updateMember = async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id));
     const member = await memberService.modifyMember(id, req.body);
-    if (!member) return errorResponse(res, 'Member not found', 404);
-    successResponse(res, member);
+    if (!member) {
+      return res.status(404).json(errorResponse('Member not found', 404));
+    }
+    res.json(successResponse(member));
   } catch (err) {
     console.error('Error in updateMember:', err);
-    errorResponse(res, 'Failed to update member');
+    res.status(500).json(errorResponse('Failed to update member', 500));
   }
 };
 
@@ -50,10 +54,12 @@ export const deleteMember = async (req: Request, res: Response) => {
   try {
     const id = parseInt(String(req.params.id));
     const success = await memberService.removeMember(id);
-    if (!success) return errorResponse(res, 'Member not found', 404);
-    res.status(204).send();
+    if (!success) {
+      return res.status(404).json(errorResponse('Member not found', 404));
+    }
+    res.status(204).send(); // 204 No Content
   } catch (err) {
     console.error('Error in deleteMember:', err);
-    errorResponse(res, 'Failed to delete member');
+    res.status(500).json(errorResponse('Failed to delete member', 500));
   }
 };
