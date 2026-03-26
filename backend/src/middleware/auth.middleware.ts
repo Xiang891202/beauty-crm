@@ -1,7 +1,8 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
-import { error } from 'node:console';
+// import { error } from 'node:console';
 
+//身分驗證中間件
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
   console.log('Authenticate middleware called'); // 可暫時加入日誌確認是否被調用
 
@@ -21,15 +22,14 @@ export const authenticate = (req: Request, res: Response, next: NextFunction) =>
 };
 
 //角色權限中間件
-
-export const requireRole = (role:string) => {
+export const roleMiddleware  = (allowedRoles: string[]) => {
   return (req: Request, res: Response, next: NextFunction) => {
     const user = (req as any).user;
     if (!user) {
       return res.status(401).json({ error: 'Unauthorized - No user context'});
     }
-    if (user.role !== role) {
-      return res.status(403).json({ error: `Forbidden - Requires ${role} role` });
+    if (!allowedRoles.includes(user.role)) {
+      return res.status(403).json({ error: `Forbidden - Requires one of roles: ${allowedRoles.join(', ')}` });
     }
     next();
   };

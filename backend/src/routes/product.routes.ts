@@ -2,7 +2,7 @@ console.log('Product routes loaded');
 import { Router } from 'express';
 import * as productController from '../controllers/product.controller';
 import { authenticate } from '../middleware/auth.middleware';
-import { requireRole } from '../middleware/role.middleware';
+import { roleMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -11,8 +11,8 @@ router.get('/', productController.getProducts);
 router.get('/:id', productController.getProduct);
 
 // 需要管理員權限的路由
-router.post('/', authenticate, requireRole(['admin']), productController.createProduct);
-router.put('/:id', authenticate, requireRole(['admin']), productController.updateProduct);
-router.delete('/:id', authenticate, requireRole(['admin']), productController.deleteProduct);
+router.post('/', authenticate, roleMiddleware(['admin']), productController.createProduct);
+router.put('/:id', authenticate, roleMiddleware(['admin']), productController.updateProduct);
+router.delete('/:id', authenticate, roleMiddleware(['admin']), productController.deleteProduct);
 
 export default router;

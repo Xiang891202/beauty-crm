@@ -1,0 +1,117 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+/// This table contains check constraints and requires additional setup for migrations. Visit https://pris.ly/d/check-constraints for more info.
+model adjustments {
+  id                Int              @id @default(autoincrement())
+  customer_id       Int?
+  member_service_id Int?
+  adjustment_type   String?          @db.VarChar(20)
+  amount            Int
+  reason            String?
+  created_at        DateTime?        @default(now()) @db.Timestamp(6)
+  created_by        Int?
+  users             users?           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers         customers?       @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  member_services   member_services? @relation(fields: [member_service_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+}
+
+model customers {
+  id              Int               @id @default(autoincrement())
+  name            String            @db.VarChar(100)
+  phone           String?           @db.VarChar(20)
+  email           String?           @db.VarChar(255)
+  birth_date      DateTime?         @db.Date
+  address         String?
+  notes           String?
+  created_at      DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at      DateTime?         @default(now()) @db.Timestamp(6)
+  adjustments     adjustments[]
+  member_services member_services[]
+  service_logs    service_logs[]
+}
+
+model member_services {
+  id           Int            @id @default(autoincrement())
+  customer_id  Int?
+  service_id   Int?
+  remaining    Int            @default(0)
+  purchased_at DateTime?      @default(now()) @db.Timestamp(6)
+  expires_at   DateTime?      @db.Timestamp(6)
+  created_at   DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at   DateTime?      @default(now()) @db.Timestamp(6)
+  adjustments  adjustments[]
+  customers    customers?     @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  services     services?      @relation(fields: [service_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  service_logs service_logs[]
+}
+
+model members {
+  id         Int       @id @default(autoincrement())
+  name       String    @db.VarChar(255)
+  phone      String?   @unique @db.VarChar(20)
+  email      String?   @unique @db.VarChar(255)
+  points     Int?      @default(0)
+  birthday   DateTime? @db.Date
+  gender     String?   @db.VarChar(10)
+  address    String?
+  notes      String?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+  updated_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+model products {
+  id          Int       @id @default(autoincrement())
+  name        String    @db.VarChar(100)
+  description String?
+  price       Decimal?  @db.Decimal(10, 2)
+  image_url   String?
+  created_at  DateTime? @default(now()) @db.Timestamp(6)
+  updated_at  DateTime? @default(now()) @db.Timestamp(6)
+  stock       Int?      @default(0)
+}
+
+model service_logs {
+  id                Int              @id @default(autoincrement())
+  customer_id       Int?
+  member_service_id Int?
+  service_id        Int?
+  used_at           DateTime?        @default(now()) @db.Timestamp(6)
+  notes             String?
+  signature_url     String?
+  created_by        Int?
+  users             users?           @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers         customers?       @relation(fields: [customer_id], references: [id], onUpdate: NoAction)
+  member_services   member_services? @relation(fields: [member_service_id], references: [id], onUpdate: NoAction)
+  services          services?        @relation(fields: [service_id], references: [id], onUpdate: NoAction)
+}
+
+model services {
+  id               Int               @id @default(autoincrement())
+  name             String            @db.VarChar(100)
+  description      String?
+  price            Decimal?          @db.Decimal(10, 2)
+  created_at       DateTime?         @default(now()) @db.Timestamp(6)
+  updated_at       DateTime?         @default(now()) @db.Timestamp(6)
+  duration_minutes Int               @default(60)
+  member_services  member_services[]
+  service_logs     service_logs[]
+}
+
+model users {
+  id            Int            @id @default(autoincrement())
+  email         String         @unique @db.VarChar(255)
+  password_hash String         @db.VarChar(255)
+  full_name     String?        @db.VarChar(100)
+  role          String?        @default("admin") @db.VarChar(50)
+  created_at    DateTime?      @default(now()) @db.Timestamp(6)
+  updated_at    DateTime?      @default(now()) @db.Timestamp(6)
+  adjustments   adjustments[]
+  service_logs  service_logs[]
+}

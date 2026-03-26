@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { authenticate, requireRole } from '../middleware/auth.middleware';
+import { authenticate, roleMiddleware } from '../middleware/auth.middleware';
 import * as serviceController from '../controllers/service.controller';
 
 const router = Router();
@@ -9,8 +9,8 @@ router.get('/', serviceController.getServices);
 router.get('/:id', serviceController.getServiceById);
 
 // 管理员路由（需要登录且拥有 admin 角色）
-router.post('/', authenticate, requireRole('admin'), serviceController.createService);
-router.put('/:id', authenticate, requireRole('admin'), serviceController.updateService);
-router.delete('/:id', authenticate, requireRole('admin'), serviceController.deleteService);
+router.post('/', authenticate, roleMiddleware(['admin']), serviceController.createService);
+router.put('/:id', authenticate, roleMiddleware(['admin']), serviceController.updateService);
+router.delete('/:id', authenticate, roleMiddleware(['admin']), serviceController.deleteService);
 
 export default router;
