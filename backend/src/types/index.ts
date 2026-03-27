@@ -49,26 +49,26 @@ export interface MemberService {
 // 使用记录（服务日志）
 export interface ServiceLog {
   id: number;
-  customer_id: number | null;
-  member_service_id?: number | null;
-  service_id: number | null;
-  used_at: Date | null;
-  notes?: string | null;
+  customer_id: number;
+  service_id?: number | null;      // 可選
+  member_service_id: number;
+  used_at: Date;
+  note?: string | null;            // ✅ 改為 note
   signature_url?: string | null;
-  created_by: number | null;
-  created_at?: Date | null;
+  created_at: Date;
+  created_by: number | null;              // 必要（但資料庫允許 NULL，視需求調整）
 }
 
 // 修正记录
 export interface Adjustment {
   id: number;
-  customer_id?: number | null;
+  // customer_id?: number | null;
   member_service_id?: number | null;
   adjustment_type: string | null;
   amount: number;
   reason?: string | null;
   created_by: number | null;
-  created_at?: Date | null;
+  created_at?: Date;
 }
 
 // 业务常量（可选）

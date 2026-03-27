@@ -1,5 +1,6 @@
 // src/routes/usage.routes.ts
 import { Router } from 'express';
+import multer from 'multer';
 import { authenticate, roleMiddleware } from '../middleware/auth.middleware';
 // import { roleMiddleware } from '../middleware/role.middleware';
 import * as usageController from '../controllers/service_log.controller';
@@ -12,6 +13,7 @@ import {
 } from '../validators/service_log.validator';
 
 const router = Router();
+const upload = multer({ storage: multer.memoryStorage() }); //暫存記憶體
 
 // 所有路由都需要认证
 router.use(authenticate);
@@ -20,6 +22,7 @@ router.use(authenticate);
 router.post(
   '/',
   roleMiddleware(['admin', 'staff']),
+  upload.single('signature'), //接收欄位名為 signature 的檔案
   validate(createUsageSchema, 'body'),
   usageController.createUsage
 );

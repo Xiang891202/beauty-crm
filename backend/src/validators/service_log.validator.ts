@@ -3,11 +3,12 @@ import Joi from 'joi';
 
 // 用于创建使用记录
 export const createUsageSchema = Joi.object({
-  customer_id: Joi.number().integer().positive().required(),
-  service_id: Joi.number().integer().positive().required(),
-  used_at: Joi.date().iso().default(Date.now),
-  notes: Joi.string().max(500).optional(),
-  signature_url: Joi.string().max(255).optional(),
+  member_service_id: Joi.number().required(), // 改為必填
+  customer_id: Joi.number().required(),
+  service_id: Joi.number().optional(), // 可選，如果傳入則記錄
+  used_at: Joi.date().optional(),
+  notes: Joi.string().optional(),
+  signature_url: Joi.string().optional(),
 });
 
 // 用于更新备注

@@ -1,6 +1,7 @@
-// src/services/usage.service.ts
+import prisma from '../config/prisma';
 import { ServiceLogRepository } from '../repositories/service_log.repo';
 import { ServiceLog } from '../types';
+import { InsufficientQuotaError } from '../types/errors';
 
 export class ServiceLogService {
   private repo: ServiceLogRepository;
@@ -9,11 +10,46 @@ export class ServiceLogService {
     this.repo = new ServiceLogRepository();
   }
 
-  async create(data: Omit<ServiceLog, 'id' | 'created_at' >): Promise<ServiceLog> {
-    // 1. 业务校验（如会员是否存在、服务是否存在、库存是否充足等）
-    // 2. 调用repo创建记录
-    // 3. 可能需要更新相关统计（如会员消费次数、产品库存）
-    return this.repo.create(data);
+  async create(data: Omit<ServiceLog, 'id' | 'created_at'>): Promise<ServiceLog> {
+    if (!data.member_service_id) {
+      return this.repo.create(data);
+    }
+
+    const memberService = await prisma.memberService.findUnique({
+      where: { id: data.member_service_id },
+      select: { remaining: true }
+    });
+
+    if (!memberService) {
+      throw new Error('找不到該服務授權');
+    }
+
+    if (memberService.remaining <= 0) {
+      throw new InsufficientQuotaError();
+    }
+
+    const result = await prisma.$transaction(async (tx) => {
+      const newLog = await tx.serviceLog.create({
+        data: {
+          customer_id: data.customer_id!,
+          member_service_id: data.member_service_id!,
+          service_id: data.service_id ?? undefined,
+          used_at: data.used_at ?? undefined,
+          notes: data.note ?? undefined,          // ✅ 改為 note
+          signature_url: data.signature_url ?? undefined,
+          created_by: data.created_by!,
+        }
+      });
+
+      await tx.memberService.update({
+        where: { id: data.member_service_id! },
+        data: { remaining: { decrement: 1 } }
+      });
+
+      return newLog;
+    });
+
+    return result;
   }
 
   async getById(id: number): Promise<ServiceLog> {
@@ -32,12 +68,11 @@ export class ServiceLogService {
     page?: number;
     limit?: number;
   }): Promise<{ items: ServiceLog[]; total: number }> {
-    // 可添加默认分页值
     return this.repo.findAll(filter);
   }
 
   async updateNotes(id: number, notes: string): Promise<ServiceLog> {
-    return this.repo.update(id, { notes });
+    return this.repo.update(id, { note: notes });  // ✅ 改為 note
   }
 
   async updateSignature(id: number, signatureUrl: string): Promise<ServiceLog> {

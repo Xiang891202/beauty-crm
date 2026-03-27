@@ -1,57 +1,32 @@
-// src/repositories/usage.repo.ts
-// import { date } from 'joi';
-import { prisma } from '../lib/prisma';
+import prisma from '../config/prisma';
 import { ServiceLog } from '../types';
 
 export class ServiceLogRepository {
-  // 创建使用记录
   async create(data: Omit<ServiceLog, 'id' | 'created_at'>): Promise<ServiceLog> {
-  const { customer_id, service_id, used_at, notes, signature_url, created_by } = data;
-  // 确保 created_by 存在
-  if (!created_by) throw new Error('created_by is required');
-  return await prisma.service_logs.create({
-    data: {
-      customer_id,
-      service_id,
-      used_at: used_at || new Date(),
-      notes,
-      signature_url,
-      created_by,
-    },
-  });
-    // //模擬返回
-    // return {
-    //     id: 1,
-    //     ...data,
-    //     createdAt: new Date(),
-    //     updatedAt: new Date(),
-    // };
-    // throw new Error('Not implemented');
+    // 必要欄位檢查
+    if (!data.customer_id) throw new Error('customer_id is required');
+    if (!data.member_service_id) throw new Error('member_service_id is required');
+
+    const createData: any = {
+      customer_id: data.customer_id,
+      member_service_id: data.member_service_id,
+      service_id: data.service_id ?? undefined,
+      used_at: data.used_at ?? undefined,
+      note: data.note ?? undefined,
+      signature_url: data.signature_url ?? undefined,
+    };
+    // 如果 created_by 有值才加入
+    if (data.created_by) {
+      createData.created_by = data.created_by;
+    }
+
+    return await prisma.serviceLog.create({ data: createData });
   }
 
-  // 根据ID查询
   async findById(id: number): Promise<ServiceLog | null> {
-    // TODO: 查询单条记录
-    return await prisma.service_logs.findUnique({ where: { id }});
-    //模擬存在數據
-    // if (id === 1) {
-    //     return {
-    //         id: 1,
-    //         memberId: 1,
-    //         serviceId: 1,
-    //         quantity: 2,
-    //         usageDate: new Date(),
-    //         notes: 'Test usage',
-    //         createdBy: 1,
-    //         createdAt: new Date(),
-    //         updatedAt: new Date(),
-    //     };
-    // }
-    // // throw new Error('Not implemented');
-    // return null;
+    return await prisma.serviceLog.findUnique({ where: { id } });
   }
 
-  // 分页查询使用记录（可按会员、服务、日期范围过滤）
   async findAll(filter: {
     customer_id?: number;
     service_id?: number;
@@ -60,7 +35,6 @@ export class ServiceLogRepository {
     page?: number;
     limit?: number;
   }): Promise<{ items: ServiceLog[]; total: number }> {
-    // TODO: 实现分页和条件查询
     const { customer_id, service_id, startDate, endDate, page = 1, limit = 20 } = filter;
     const skip = (page - 1) * limit;
 
@@ -68,60 +42,31 @@ export class ServiceLogRepository {
     if (customer_id) where.customer_id = customer_id;
     if (service_id) where.service_id = service_id;
     if (startDate || endDate) {
-        where.used_at = {};
-        if (startDate) where.used_at.gte = startDate;
-        if (endDate) where.used_at.lte = endDate;
+      where.used_at = {};
+      if (startDate) where.used_at.gte = startDate;
+      if (endDate) where.used_at.lte = endDate;
     }
 
     const [items, total] = await Promise.all([
-        prisma.service_logs.findMany({
-            where,
-            skip,
-            take: limit,
-            orderBy: { used_at: 'desc' },
-        }),
-        prisma.service_logs.count({ where }),
+      prisma.serviceLog.findMany({
+        where,
+        skip,
+        take: limit,
+        orderBy: { used_at: 'desc' },
+      }),
+      prisma.serviceLog.count({ where }),
     ]);
+
     return { items, total };
-    //模擬列表
-    // return {
-    //   items: [
-    //     {
-    //       id: 1,
-    //       memberId: 1,
-    //       serviceId: 1,
-    //       quantity: 2,
-    //       usageDate: new Date(),
-    //       notes: 'Test usage',
-    //       createdBy: 1,
-    //       createdAt: new Date(),
-    //       updatedAt: new Date(),
-    //     },
-    //   ],
-    //   total: 1,
-    // };
-    // throw new Error('Not implemented');
   }
 
-  // 更新使用记录（一般只允许修改备注等非核心字段）
-  async update(id: number, data: Partial<Pick<ServiceLog, 'notes' | 'signature_url'>>): Promise<ServiceLog> {
-    // TODO: 实现更新
-    return await prisma.service_logs.update({
-        where: { id },
-        data,
+  async update(id: number, data: Partial<Pick<ServiceLog, 'note' | 'signature_url'>>): Promise<ServiceLog> {
+    const updateData: any = {};
+    if (data.note !== undefined) updateData.note = data.note;
+    if (data.signature_url !== undefined) updateData.signature_url = data.signature_url;
+    return await prisma.serviceLog.update({
+      where: { id },
+      data: updateData,
     });
-    //模擬更新
-    // return {
-    //   id,
-    //   memberId: 1,
-    //   serviceId: 1,
-    //   quantity: 2,
-    //   usageDate: new Date(),
-    //   notes: data.notes || 'Updated notes',
-    //   createdBy: 1,
-    //   createdAt: new Date(),
-    //   updatedAt: new Date(),
-    // };
   }
-    // throw new Error('Not implemented');
 }

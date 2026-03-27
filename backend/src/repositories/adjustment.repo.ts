@@ -1,48 +1,21 @@
-// src/repositories/adjustment.repo.ts
-import { prisma } from '../lib/prisma';
+import prisma from '../config/prisma';
 import { Adjustment } from '../types';
 
 export class AdjustmentRepository {
   async create(data: Omit<Adjustment, 'id' | 'created_at'>): Promise<Adjustment> {
-    const { customer_id, member_service_id, adjustment_type, amount, reason, created_by } = data
-  return await prisma.adjustments.create({
-    data: {
-      ...data,
-      adjustment_type: data.adjustment_type as string | null, // 关键断言
-      amount,
-      reason,
-      created_by,
-    },
-  });
-    //模擬返回
-    // return {
-    //     id: 1,
-    //     ...data,
-    //     createdAt: new Date(),
-    //     // updatedAt: new Date(),
-    // };
-    // throw new Error('Not implemented');
+    const createData: any = {
+      // customer_id: data.customer_id ?? null,
+      member_service_id: data.member_service_id ?? null,
+      adjustment_type: data.adjustment_type,
+      amount: data.amount,
+      reason: data.reason ?? null,
+      created_by: data.created_by ?? null,
+    };
+    return await prisma.adjustment.create({ data: createData });
   }
 
   async findById(id: number): Promise<Adjustment | null> {
-    // TODO: 查询单条
-    return await prisma.adjustments.findUnique({ where: { id }});
-    //模擬存在數據
-    // if (id === 1) {
-    //     return {
-    //         id: 1,
-    //         usageId: 1,
-    //         type: 'INCREASE',
-    //         quantity: 2,
-    //         reason: 'Test reason',
-    //         notes: 'Test notes',
-    //         createdBy: 1,
-    //         createdAt: new Date(),
-    //         // updatedAt: new Date(),
-    //     };
-    // }
-    // // throw new Error('Not implemented');
-    // return null;
+    return await prisma.adjustment.findUnique({ where: { id } });
   }
 
   async findAll(filter: {
@@ -54,7 +27,6 @@ export class AdjustmentRepository {
     page?: number;
     limit?: number;
   }): Promise<{ items: Adjustment[]; total: number }> {
-    // TODO: 分页条件查询
     const { customer_id, member_service_id, adjustment_type, startDate, endDate, page = 1, limit = 20 } = filter;
     const skip = (page - 1) * limit;
 
@@ -69,33 +41,15 @@ export class AdjustmentRepository {
     }
 
     const [items, total] = await Promise.all([
-      prisma.adjustments.findMany({
+      prisma.adjustment.findMany({
         where,
         skip,
         take: limit,
         orderBy: { created_at: 'desc' },
       }),
-      prisma.adjustments.count({ where }),
+      prisma.adjustment.count({ where }),
     ]);
 
     return { items, total };
   }
-    //模擬列表
-    // return {
-    //   items: [
-    //     {
-    //       id: 1,
-    //       usageId: 1,
-    //       type: 'INCREASE',
-    //       quantity: 2,
-    //       reason: 'Test reason',
-    //       notes: 'Test notes',
-    //       createdBy: 1,
-    //       createdAt: new Date(),
-    //     //   updatedAt: new Date(),
-    //     },
-    //   ],
-    //   total: 1,
-    // };
-    // throw new Error('Not implemented');
 }

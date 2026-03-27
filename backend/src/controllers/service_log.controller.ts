@@ -1,31 +1,51 @@
 // src/controllers/usage.controller.ts
 import { Request, Response } from 'express';
+import prisma from '../config/prisma';
 import { ServiceLogService } from '../services/service_log.service';
+import { SignatureService } from '../services/signature.service';
 import { successResponse, errorResponse } from '../utils/response';
-import { subscribe } from 'node:diagnostics_channel';
+import { InsufficientQuotaError } from '../types/errors';
 
 const usageService = new ServiceLogService();
 
 export const createUsage = async (req: Request, res: Response) => {
   try {
-    const usageData = req.body;
+    const { member_service_id, customer_id, service_id, used_at, notes } = req.body;
     const createdBy = (req as any).user?.id;
-    if (!createdBy) throw new Error('Unauthorized');
+    const signatureFile = req.file;
 
-    // 构造正确的数据对象，使用数据库字段名
+    if (!createdBy) throw new Error('Unauthorized');
+    if (!member_service_id || !customer_id) {
+      throw new Error('缺少必要欄位: member_service_id 或 customer_id');
+    }
+
+    let signatureUrl: string | undefined;
+    if (signatureFile) {
+      signatureUrl = await SignatureService.upload(signatureFile);
+    }
+
     const createData = {
-      customer_id: usageData.customer_id,
-      service_id: usageData.service_id,
-      used_at: usageData.used_at,
-      notes: usageData.notes,
-      signature_url: usageData.signature_url,
-      created_by: createdBy,   // 关键：使用 created_by 字段
+      member_service_id: Number(member_service_id),
+      customer_id: Number(customer_id),
+      service_id: service_id ? Number(service_id) : null,
+      used_at: used_at ? new Date(used_at) : new Date(),
+      notes: notes || null,
+      signature_url: signatureUrl,
+      created_by: createdBy,
     };
 
     const newUsage = await usageService.create(createData);
-    res.json(successResponse(newUsage));
+    const updatedMemberService = await prisma.memberService.findUnique({
+      where: { id: Number(member_service_id) },
+      select: { remaining: true }
+    });
+    res.json(successResponse({
+      ...newUsage,
+      remaining: updatedMemberService?.remaining ?? 0
+    }));
   } catch (error: any) {
-    const status = error.status || 400;
+    console.error(error);
+    const status = error instanceof InsufficientQuotaError ? 400 : error.status || 400;
     res.status(status).json(errorResponse(error.message, status));
   }
 };
@@ -34,11 +54,9 @@ export const getUsage = async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const usage = await usageService.getById(Number(id));
-    // successResponse(res, 200, 'Usage record retrieved', usage);
     res.json(successResponse(usage));
   } catch (error: any) {
-    const status = error.status || 404 ;
-    // errorResponse(res, 404, error.message);
+    const status = error.status || 404;
     res.status(status).json(errorResponse(error.message, status));
   }
 };
@@ -66,11 +84,9 @@ export const updateUsageNotes = async (req: Request, res: Response) => {
     const { id } = req.params;
     const { notes } = req.body;
     const updated = await usageService.updateNotes(Number(id), notes);
-    // successResponse(res, 200, 'Usage notes updated', updated);
     res.json(successResponse(updated));
   } catch (error: any) {
     const status = error.status || 400;
-    // errorResponse(res, 400, error.message);
     res.status(status).json(errorResponse(error.message, status));
   }
 };
