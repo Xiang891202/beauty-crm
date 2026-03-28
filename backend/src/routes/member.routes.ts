@@ -7,6 +7,7 @@ const router = Router();
 
 // 公開路由（所有人可查看會員列表與詳情）
 router.get('/', memberController.getMembers);
+router.get('/:id/services', memberController.getMemberServices);
 router.get('/:id', memberController.getMember);
 
 // 需要管理員權限的路由

@@ -1,4 +1,5 @@
 import { Request, Response } from 'express';
+import prisma from '../config/prisma';
 import * as memberService from '../services/member.service';
 import { successResponse, errorResponse } from '../utils/response';
 
@@ -61,5 +62,29 @@ export const deleteMember = async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Error in deleteMember:', err);
     res.status(500).json(errorResponse('Failed to delete member', 500));
+  }
+};
+
+// 添加到 member.controller.ts 末尾
+export const getMemberServices = async (req: Request, res: Response) => {
+  try {
+    const id = parseInt(String(req.params.id));
+    if (isNaN(id)) {
+      return res.status(400).json(errorResponse('Invalid member ID', 400));
+    }
+
+    // 使用 Prisma 直接查询，或通过 service 层
+    const memberServices = await prisma.memberService.findMany({
+      where: { customer_id: id },
+      include: {
+        service: true, // 包含服务详情
+      },
+      orderBy: { created_at: 'desc' },
+    });
+
+    res.json(successResponse(memberServices));
+  } catch (err) {
+    console.error('Error in getMemberServices:', err);
+    res.status(500).json(errorResponse('Failed to fetch member services', 500));
   }
 };

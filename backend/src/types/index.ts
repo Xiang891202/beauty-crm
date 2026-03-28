@@ -63,7 +63,7 @@ export interface ServiceLog {
 export interface Adjustment {
   id: number;
   // customer_id?: number | null;
-  member_service_id?: number | null;
+  member_service_id: number;
   adjustment_type: string | null;
   amount: number;
   reason?: string | null;
