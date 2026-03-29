@@ -17,14 +17,14 @@ export class ServiceLogService {
 
     const memberService = await prisma.memberService.findUnique({
       where: { id: data.member_service_id },
-      select: { remaining: true }
+      select: { remaining_sessions: true }
     });
 
     if (!memberService) {
       throw new Error('找不到該服務授權');
     }
 
-    if (memberService.remaining <= 0) {
+    if (memberService.remaining_sessions <= 0) {
       throw new InsufficientQuotaError();
     }
 
@@ -35,7 +35,7 @@ export class ServiceLogService {
           member_service_id: data.member_service_id!,
           service_id: data.service_id ?? undefined,
           used_at: data.used_at ?? undefined,
-          notes: data.note ?? undefined,          // ✅ 改為 note
+          notes: data.notes ?? undefined,          // ✅ 改為 note
           signature_url: data.signature_url ?? undefined,
           created_by: data.created_by!,
         }
@@ -43,7 +43,7 @@ export class ServiceLogService {
 
       await tx.memberService.update({
         where: { id: data.member_service_id! },
-        data: { remaining: { decrement: 1 } }
+        data: { remaining_sessions: { decrement: 1 } }
       });
 
       return newLog;
@@ -72,7 +72,7 @@ export class ServiceLogService {
   }
 
   async updateNotes(id: number, notes: string): Promise<ServiceLog> {
-    return this.repo.update(id, { note: notes });  // ✅ 改為 note
+    return this.repo.update(id, { notes: notes });  // ✅ 改為 note
   }
 
   async updateSignature(id: number, signatureUrl: string): Promise<ServiceLog> {

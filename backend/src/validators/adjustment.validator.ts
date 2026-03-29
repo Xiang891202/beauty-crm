@@ -10,6 +10,7 @@ export const createAdjustmentSchema = Joi.object({
 }).xor('customer_id', 'member_service_id');
 
 export const listAdjustmentsQuerySchema = Joi.object({
+  usageId: Joi.number().integer().positive().optional(),
   customer_id: Joi.number().integer().positive().optional(),
   member_service_id: Joi.number().integer().positive().optional(),
   adjustment_type: Joi.string().valid('INCREASE', 'DECREASE').optional(),

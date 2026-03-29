@@ -1,26 +1,23 @@
+import { custom } from 'joi';
 import prisma from '../config/prisma';
 import { ServiceLog } from '../types';
 
 export class ServiceLogRepository {
   async create(data: Omit<ServiceLog, 'id' | 'created_at'>): Promise<ServiceLog> {
-    // 必要欄位檢查
     if (!data.customer_id) throw new Error('customer_id is required');
     if (!data.member_service_id) throw new Error('member_service_id is required');
 
-    const createData: any = {
-      customer_id: data.customer_id,
-      member_service_id: data.member_service_id,
-      service_id: data.service_id ?? undefined,
-      used_at: data.used_at ?? undefined,
-      note: data.note ?? undefined,
-      signature_url: data.signature_url ?? undefined,
-    };
-    // 如果 created_by 有值才加入
-    if (data.created_by) {
-      createData.created_by = data.created_by;
-    }
-
-    return await prisma.serviceLog.create({ data: createData });
+    return await prisma.serviceLog.create({
+      data: {
+        customer_id: data.customer_id,
+        member_service_id: data.member_service_id,
+        service_id: data.service_id ?? undefined,
+        used_at: data.used_at ?? undefined,   // 如果传入 null，则 undefined，数据库使用默认值 NOW()
+        notes: data.notes ?? undefined,
+        signature_url: data.signature_url ?? undefined,
+        created_by: data.created_by ?? undefined,
+      },
+    });
   }
 
   async findById(id: number): Promise<ServiceLog | null> {
@@ -28,19 +25,24 @@ export class ServiceLogRepository {
   }
 
   async findAll(filter: {
-    customer_id?: number;
-    service_id?: number;
-    startDate?: Date;
-    endDate?: Date;
-    page?: number;
-    limit?: number;
+  customer_id?: number;
+  service_id?: number;
+  startDate?: Date;
+  endDate?: Date;
+  page?: number;
+  limit?: number;
   }): Promise<{ items: ServiceLog[]; total: number }> {
     const { customer_id, service_id, startDate, endDate, page = 1, limit = 20 } = filter;
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-    if (customer_id) where.customer_id = customer_id;
-    if (service_id) where.service_id = service_id;
+    const where: {
+      customer_id?: number;
+      service_id?: number;
+      used_at?: { gte?: Date; lte?: Date };
+    } = {};
+
+    if (customer_id !== undefined) where.customer_id = customer_id;
+    if (service_id !== undefined) where.service_id = service_id;
     if (startDate || endDate) {
       where.used_at = {};
       if (startDate) where.used_at.gte = startDate;
@@ -48,11 +50,20 @@ export class ServiceLogRepository {
     }
 
     const [items, total] = await Promise.all([
-      prisma.serviceLog.findMany({
-        where,
-        skip,
-        take: limit,
+      prisma.serviceLog.findMany({ 
+        where, 
+        skip, 
+        take: 
+        limit, 
         orderBy: { used_at: 'desc' },
+        include: {
+          customer: true,
+          service: true,
+          member_service: {
+            include: { service: true }
+          },
+          users: true,
+        },
       }),
       prisma.serviceLog.count({ where }),
     ]);
@@ -60,10 +71,10 @@ export class ServiceLogRepository {
     return { items, total };
   }
 
-  async update(id: number, data: Partial<Pick<ServiceLog, 'note' | 'signature_url'>>): Promise<ServiceLog> {
-    const updateData: any = {};
-    if (data.note !== undefined) updateData.note = data.note;
-    if (data.signature_url !== undefined) updateData.signature_url = data.signature_url;
+    async update(id: number, data: Partial<Pick<ServiceLog, 'notes' | 'signature_url'>>): Promise<ServiceLog> {
+    const updateData: { notes?: string; signature_url?: string } = {};
+    if (data.notes !== undefined) updateData.notes = data.notes ?? undefined;  // 允许设置为 null 来清空备注
+    if (data.signature_url !== undefined) updateData.signature_url = data.signature_url ?? undefined;  // 允许设置为 null 来清空签名URL
     return await prisma.serviceLog.update({
       where: { id },
       data: updateData,

@@ -3,15 +3,15 @@
     <h2>使用服務</h2>
     <form @submit.prevent="handleSubmit">
       <div>
-        <label>會員服務 ID (member_service_id)</label>
-        <input v-model="form.member_service_id" type="number" required />
+        <label>選擇服務方案</label>
+        <select v-model="selectedMemberServiceId" required>
+          <option v-for="ms in memberServices" :key="ms.id" :value="ms.id">
+            {{ ms.service.name }}（剩餘 {{ ms.remaining_sessions }} 次）
+          </option>
+        </select>
       </div>
       <div>
-        <label>客戶 ID (customer_id)</label>
-        <input v-model="form.customer_id" type="number" required />
-      </div>
-      <div>
-        <label>簽名（可選）</label>
+        <label>簽名</label>
         <canvas
           ref="signatureCanvas"
           width="400"
@@ -32,36 +32,66 @@
   </div>
 </template>
 
-<script setup>
+<script setup lang="ts">
 import { ref, onMounted } from 'vue';
 import { createUsage } from '@/api/modules/usage';
+import { getMemberServices } from '@/api/modules/member';
 
-const form = ref({
-  member_service_id: '',
-  customer_id: ''
-});
+interface MemberService {
+  id: number;
+  service_id: number;
+  remaining_sessions: number;
+  service: {
+    name: string;
+  };
+}
 
+const props = defineProps<{ memberId: number; preselectServiceId?: number }>();
+const emit = defineEmits(['success', 'close']);
+
+const memberServices = ref<MemberService[]>([]);
+const selectedMemberServiceId = ref<number | null>(null);
 const loading = ref(false);
 const message = ref('');
 const isError = ref(false);
-const signatureCanvas = ref(null);
-let ctx = null;
+const signatureCanvas = ref<HTMLCanvasElement | null>(null);
+let ctx: CanvasRenderingContext2D | null = null;
 let drawing = false;
 
-onMounted(() => {
+onMounted(async () => {
+  try {
+    const res = await getMemberServices(props.memberId);
+    memberServices.value = res.data.data.filter((ms: MemberService) => ms.remaining_sessions > 0);
+    if (memberServices.value.length === 0) {
+      message.value = '此會員尚無有效服務方案';
+      isError.value = true;
+    }
+    // 预设选中
+    if (props.preselectServiceId && memberServices.value.length) {
+      const found = memberServices.value.find(ms => ms.id === props.preselectServiceId);
+      if (found) selectedMemberServiceId.value = found.id;
+    }
+  } catch (err) {
+    console.error(err);
+    message.value = '加載服務方案失敗';
+    isError.value = true;
+  }
+
   if (signatureCanvas.value) {
     ctx = signatureCanvas.value.getContext('2d');
-    // 初始填充白色
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height);
-    ctx.strokeStyle = '#000';
-    ctx.lineWidth = 2;
-    ctx.lineCap = 'round';
-    ctx.lineJoin = 'round';
+    if (ctx) {
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height);
+      ctx.strokeStyle = '#000';
+      ctx.lineWidth = 2;
+      ctx.lineCap = 'round';
+      ctx.lineJoin = 'round';
+    }
   }
 });
 
-const startDrawing = (e) => {
+const startDrawing = (e: MouseEvent) => {
+  if (!ctx || !signatureCanvas.value) return;
   drawing = true;
   const rect = signatureCanvas.value.getBoundingClientRect();
   const x = e.clientX - rect.left;
@@ -72,8 +102,8 @@ const startDrawing = (e) => {
   ctx.stroke();
 };
 
-const draw = (e) => {
-  if (!drawing) return;
+const draw = (e: MouseEvent) => {
+  if (!drawing || !ctx || !signatureCanvas.value) return;
   const rect = signatureCanvas.value.getBoundingClientRect();
   const x = e.clientX - rect.left;
   const y = e.clientY - rect.top;
@@ -85,29 +115,40 @@ const draw = (e) => {
 
 const stopDrawing = () => {
   drawing = false;
-  ctx.beginPath();
+  if (ctx) ctx.beginPath();
 };
 
 const clearCanvas = () => {
-  if (ctx) {
+  if (ctx && signatureCanvas.value) {
     ctx.clearRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height);
     ctx.fillStyle = '#fff';
     ctx.fillRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height);
   }
 };
 
-const getSignatureFile = () => {
+const getSignatureFile = (): Promise<File> => {
   return new Promise((resolve) => {
+    if (!signatureCanvas.value) {
+      resolve(new File([], 'empty.png'));
+      return;
+    }
     signatureCanvas.value.toBlob((blob) => {
-      const file = new File([blob], 'signature.png', { type: 'image/png' });
+      const file = new File([blob!], 'signature.png', { type: 'image/png' });
       resolve(file);
     });
   });
 };
 
 const handleSubmit = async () => {
-  if (!form.value.member_service_id || !form.value.customer_id) {
-    message.value = '請填寫會員服務 ID 和客戶 ID';
+  if (!selectedMemberServiceId.value) {
+    message.value = '請選擇服務方案';
+    isError.value = true;
+    return;
+  }
+
+  const selectedMs = memberServices.value.find(ms => ms.id === selectedMemberServiceId.value);
+  if (!selectedMs) {
+    message.value = '服務方案無效';
     isError.value = true;
     return;
   }
@@ -118,19 +159,21 @@ const handleSubmit = async () => {
 
   try {
     const signatureFile = await getSignatureFile();
-    const formData = new FormData();
-    formData.append('member_service_id', form.value.member_service_id);
-    formData.append('customer_id', form.value.customer_id);
+    const formData = new FormData(); // 在这里创建
+    formData.append('member_service_id', String(selectedMemberServiceId.value));
+    formData.append('customer_id', String(props.memberId));
+    formData.append('service_id', String(selectedMs.service_id));
     formData.append('signature', signatureFile);
+    // 可选备注
+    // if (notes.value) formData.append('notes', notes.value);
 
     const res = await createUsage(formData);
     const { remaining } = res.data.data;
 
     message.value = `使用成功！剩餘次數：${remaining}`;
-    form.value.member_service_id = '';
-    form.value.customer_id = '';
+    emit('success', { remaining });
     clearCanvas();
-  } catch (err) {
+  } catch (err: any) {
     console.error(err);
     message.value = err.response?.data?.error || '使用失敗，請稍後再試';
     isError.value = true;
@@ -141,13 +184,5 @@ const handleSubmit = async () => {
 </script>
 
 <style scoped>
-.message {
-  margin-top: 1rem;
-  padding: 0.5rem;
-  border-radius: 4px;
-}
-.error {
-  background-color: #ffebee;
-  color: #c62828;
-}
+/* 样式保持不变 */
 </style>

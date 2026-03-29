@@ -17,9 +17,9 @@
       <thead>
         <tr>
           <th>ID</th>
-          <th>客戶 ID</th>
-          <th>服務授權 ID</th>
-          <th>服務 ID</th>
+          <th>客戶</th>
+          <th>服務包</th>
+          <th>服務項目</th>
           <th>使用時間</th>
           <th>備註</th>
           <th>簽名</th>
@@ -29,19 +29,19 @@
       <tbody>
         <tr v-for="log in logs" :key="log.id">
           <td>{{ log.id }}</td>
-          <td>{{ log.customer_id }}</td>
-          <td>{{ log.member_service_id }}</td>
-          <td>{{ log.service_id }}</td>
+          <td>{{ log.customer?.name || `客戶 ${log.customer_id}` }} ({{ log.customer_id }})</td>
+          <td>
+            {{ log.member_service?.service?.name || `服務包 ${log.member_service_id}` }}
+            ({{ log.member_service_id }})
+          </td>
+          <td>{{ log.service?.name || `服務 ${log.service_id}` }} ({{ log.service_id }})</td>
           <td>{{ formatDate(log.used_at) }}</td>
           <td>{{ log.notes || '-' }}</td>
           <td>
             <a v-if="log.signature_url" :href="log.signature_url" target="_blank">檢視</a>
             <span v-else>-</span>
           </td>
-          <td>{{ log.created_by }}</td>
-        </tr>
-        <tr v-if="logs.length === 0">
-          <td colspan="8">暫無記錄</td>
+          <td>{{ log.users?.email || `管理員 ${log.created_by}` }} ({{ log.created_by }})</td>
         </tr>
       </tbody>
     </table>

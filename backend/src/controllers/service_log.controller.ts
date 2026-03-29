@@ -37,11 +37,11 @@ export const createUsage = async (req: Request, res: Response) => {
     const newUsage = await usageService.create(createData);
     const updatedMemberService = await prisma.memberService.findUnique({
       where: { id: Number(member_service_id) },
-      select: { remaining: true }
+      select: { remaining_sessions: true }
     });
     res.json(successResponse({
       ...newUsage,
-      remaining: updatedMemberService?.remaining ?? 0
+      remaining: updatedMemberService?.remaining_sessions ?? 0
     }));
   } catch (error: any) {
     console.error(error);

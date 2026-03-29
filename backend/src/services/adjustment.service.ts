@@ -11,7 +11,7 @@ export class AdjustmentService {
     this.repo = new AdjustmentRepository();
   }
 
-  async createAdjustment(data: Omit<Adjustment, 'id' | 'createdAt'>): Promise<Adjustment> {
+  async createAdjustment(data: Omit<Adjustment, 'id' | 'created_at'>): Promise<Adjustment> {
     // 1. 校验必须字段
     if (!data.member_service_id) {
       throw new Error('member_service_id is required');
@@ -28,11 +28,11 @@ export class AdjustmentService {
       }
 
       // 3. 计算新的剩余次数
-      let newRemaining = memberService.remaining;
+      let newRemaining = memberService.remaining_sessions;
       if (data.adjustment_type === 'INCREASE') {
         newRemaining += data.amount;
       } else if (data.adjustment_type === 'DECREASE') {
-        if (memberService.remaining - data.amount < 0) {
+        if (memberService.remaining_sessions - data.amount < 0) {
           throw new Error('Cannot decrease below zero');
         }
         newRemaining -= data.amount;
@@ -40,14 +40,14 @@ export class AdjustmentService {
 
       // 4. 更新 member_services 的剩余次数
       await tx.memberService.update({
-        where: { id: data.member_service_id },
-        data: { remaining: newRemaining },
+        where: { id: data.member_service_id! },
+        data: { remaining_sessions: newRemaining },
       });
 
       // 5. 创建调整记录
       const adjustment = await tx.adjustment.create({
         data: {
-          member_service_id: data.member_service_id,
+          member_service_id: data.member_service_id!,
           adjustment_type: data.adjustment_type as 'INCREASE' | 'DECREASE', // 显式类型断言
           amount: data.amount,
           reason: data.reason ?? null,
@@ -69,14 +69,21 @@ export class AdjustmentService {
   }
 
   async list(filter: {
-    usageId?: number;
-    productId?: number;
-    type?: 'INCREASE' | 'DECREASE';
-    startDate?: Date;
-    endDate?: Date;
-    page?: number;
-    limit?: number;
+  usageId?: number;
+  productId?: number;
+  type?: 'INCREASE' | 'DECREASE';
+  startDate?: Date;
+  endDate?: Date;
+  page?: number;
+  limit?: number;
   }): Promise<{ items: Adjustment[]; total: number }> {
-    return this.repo.findAll(filter);
+    return this.repo.findAll({
+      member_service_id: filter.usageId,   // 映射
+      adjustment_type: filter.type,
+      startDate: filter.startDate,
+      endDate: filter.endDate,
+      page: filter.page,
+      limit: filter.limit,
+    });
   }
 }

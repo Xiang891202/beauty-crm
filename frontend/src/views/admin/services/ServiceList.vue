@@ -1,35 +1,36 @@
 <template>
   <div>
     <div class="header">
-      <h2>商品管理</h2>
-      <button @click="showForm = true">新增商品</button>
+      <h2>服務管理</h2>
+      <button @click="showForm = true">新增服務</button>
     </div>
 
-    <table class="product-table">
+    <!-- 服务列表表格 -->
+    <table class="service-table">
       <thead>
         <tr>
           <th>ID</th>
           <th>名稱</th>
           <th>價格</th>
-          <th>庫存</th>
+          <th>時長(分鐘)</th>
           <th>描述</th>
           <th>操作</th>
         </tr>
       </thead>
       <tbody>
-        <tr v-for="product in products" :key="product.id">
-          <td>{{ product.id }}</td>
-          <td>{{ product.name }}</td>
-          <td>{{ product.price }}</td>
-          <td>{{ product.stock }}</td>
-          <td>{{ product.description || '-' }}</td>
+        <tr v-for="service in services" :key="service.id">
+          <td>{{ service.id }}</td>
+          <td>{{ service.name }}</td>
+          <td>{{ service.price }}</td>
+          <td>{{ service.duration_minutes }}</td>
+          <td>{{ service.description || '-' }}</td>
           <td>
-            <button @click="editProduct(product)">編輯</button>
-            <button @click="deleteProduct(product.id)">刪除</button>
+            <button @click="editService(service)">編輯</button>
+            <button @click="deleteService(service.id)">刪除</button>
           </td>
         </tr>
-        <tr v-if="products.length === 0">
-          <td colspan="6">暫無商品資料</td>
+        <tr v-if="services.length === 0">
+          <td colspan="6">暫無服務資料</td>
         </tr>
       </tbody>
     </table>
@@ -37,7 +38,7 @@
     <!-- 新增/编辑表单模态框 -->
     <div v-if="showForm" class="modal">
       <div class="modal-content">
-        <h3>{{ editing ? '編輯商品' : '新增商品' }}</h3>
+        <h3>{{ editing ? '編輯服務' : '新增服務' }}</h3>
         <form @submit.prevent="submitForm">
           <div>
             <label>名稱</label>
@@ -48,8 +49,8 @@
             <input v-model.number="form.price" type="number" step="0.01" required />
           </div>
           <div>
-            <label>庫存</label>
-            <input v-model.number="form.stock" type="number" required />
+            <label>時長(分鐘)</label>
+            <input v-model.number="form.duration_minutes" type="number" required />
           </div>
           <div>
             <label>描述</label>
@@ -69,53 +70,57 @@
 import { ref, onMounted } from 'vue';
 import http from '@/api/http';
 
-interface Product {
+interface Service {
   id: number;
   name: string;
   price: number;
-  stock: number;
+  duration_minutes: number;
   description: string | null;
 }
 
-const products = ref<Product[]>([]);
+const services = ref<Service[]>([]);
 const showForm = ref(false);
 const editing = ref(false);
-const form = ref<Partial<Product>>({ name: '', price: 0, stock: 0, description: null });
+const form = ref<Partial<Service>>({ name: '', price: 0, duration_minutes: 60, description: null });
 
-const loadProducts = async () => {
+// 加载服务列表
+const loadServices = async () => {
   try {
-    const res = await http.get('/products');
-    products.value = res.data.data;
+    const res = await http.get('/services');
+    services.value = res.data.data;
   } catch (err) {
-    console.error('加載商品失敗', err);
+    console.error('加載服務失敗', err);
   }
 };
 
+// 提交表单
 const submitForm = async () => {
   try {
     if (editing.value && form.value.id) {
-      await http.put(`/products/${form.value.id}`, form.value);
+      await http.put(`/services/${form.value.id}`, form.value);
     } else {
-      await http.post('/products', form.value);
+      await http.post('/services', form.value);
     }
     closeForm();
-    loadProducts();
+    loadServices();
   } catch (err) {
     console.error('儲存失敗', err);
   }
 };
 
-const editProduct = (product: Product) => {
+// 编辑
+const editService = (service: Service) => {
   editing.value = true;
-  form.value = { ...product };
+  form.value = { ...service };
   showForm.value = true;
 };
 
-const deleteProduct = async (id: number) => {
-  if (!confirm('確定刪除此商品嗎？')) return;
+// 删除
+const deleteService = async (id: number) => {
+  if (!confirm('確定刪除此服務嗎？')) return;
   try {
-    await http.delete(`/products/${id}`);
-    loadProducts();
+    await http.delete(`/services/${id}`);
+    loadServices();
   } catch (err) {
     console.error('刪除失敗', err);
   }
@@ -124,32 +129,31 @@ const deleteProduct = async (id: number) => {
 const closeForm = () => {
   showForm.value = false;
   editing.value = false;
-  form.value = { name: '', price: 0, stock: 0, description: null };
+  form.value = { name: '', price: 0, duration_minutes: 60, description: null };
 };
 
 onMounted(() => {
-  loadProducts();
+  loadServices();
 });
 </script>
 
 <style scoped>
-/* 复用服务管理的样式，可单独提取公共样式 */
 .header {
   display: flex;
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
 }
-.product-table {
+.service-table {
   width: 100%;
   border-collapse: collapse;
 }
-.product-table th, .product-table td {
+.service-table th, .service-table td {
   border: 1px solid #ddd;
   padding: 8px;
   text-align: left;
 }
-.product-table th {
+.service-table th {
   background-color: #f2f2f2;
 }
 button {
