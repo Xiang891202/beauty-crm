@@ -1,16 +1,16 @@
 <template>
-  <div class="base-input" :class="{ 'has-error': error }">
+  <div class="base-textarea">
     <label v-if="label" :for="id" class="label">{{ label }}</label>
-    <input
+    <textarea
       :id="id"
-      :type="type"
       :value="modelValue"
-      @input="updateValue"
+      @input="onInput"
       :placeholder="placeholder"
+      :rows="rows"
       :disabled="disabled"
-      class="input"
+      :readonly="readonly"
+      class="textarea"
     />
-    <span v-if="error" class="error-message">{{ error }}</span>
   </div>
 </template>
 
@@ -18,53 +18,45 @@
 import { computed } from 'vue';
 
 const props = defineProps<{
-  modelValue: string | number;
+  modelValue: string;
   label?: string;
-  type?: string;
   placeholder?: string;
+  rows?: number;
   disabled?: boolean;
-  error?: string;
+  readonly?: boolean;
 }>();
 
 const emit = defineEmits<{
   (e: 'update:modelValue', value: string): void;
 }>();
 
-const id = computed(() => `input-${Math.random().toString(36).substr(2, 8)}`);
+const id = computed(() => `textarea-${Math.random().toString(36).substr(2, 9)}`);
 
-const updateValue = (event: Event) => {
-  const target = event.target as HTMLInputElement;
+const onInput = (event: Event) => {
+  const target = event.target as HTMLTextAreaElement;
   emit('update:modelValue', target.value);
 };
 </script>
 
 <style scoped>
-.base-input {
+.base-textarea {
   margin-bottom: 1rem;
 }
 .label {
   display: block;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.25rem;
   font-weight: 500;
 }
-.input {
+.textarea {
   width: 100%;
   padding: 0.5rem;
-  border: 1px solid #ddd;
+  border: 1px solid #ccc;
   border-radius: 4px;
   font-family: inherit;
+  font-size: 1rem;
 }
-.input:focus {
+.textarea:focus {
   outline: none;
-  border-color: #409eff;
-}
-.has-error .input {
-  border-color: #f56c6c;
-}
-.error-message {
-  color: #f56c6c;
-  font-size: 0.8rem;
-  margin-top: 0.25rem;
-  display: block;
+  border-color: #007bff;
 }
 </style>

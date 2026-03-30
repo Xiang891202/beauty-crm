@@ -9,7 +9,8 @@
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
     "baseUrl": ".",
-    "types": ["node"],  // ← 添加这一行
+    "types": ["node", "jest"],  // ← 添加这一行
+    "typeRoots": ["./node_modules/@types", "./src/types"],
     "paths": {
       "@/*": ["./src/*"]
     }

@@ -3,6 +3,7 @@ import * as authService from '../services/auth.service';
 import { successResponse, errorResponse } from '../utils/response';
 import { loginSchema } from '../validators/auth.validator';
 import { generateToken } from '../utils/jwt'
+// import '../types/express.d.ts'; // 确保全局类型扩展被加载
 
 // export const login = async (req: Request, res: Response) => {
 //   try {
@@ -43,4 +44,8 @@ export const login = async (req: Request, res: Response) => {
 export const register = async (req: Request, res: Response) => {
   // 可选：临时返回成功，或者调用 service 创建用户（需先实现）
   return res.json(successResponse({ message: 'Register endpoint not implemented' }));
+};
+
+export const getProfile = async (req: Request, res: Response) => {
+  res.json({ success: true, data: (req as any).user });
 };

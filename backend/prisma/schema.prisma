@@ -18,6 +18,7 @@ model Customer {
   created_at      DateTime?       @default(now()) @db.Timestamp(6)
   updated_at      DateTime?       @default(now()) @db.Timestamp(6)
   birthday        DateTime?       @db.Date
+  password_hash   String?         @db.VarChar(255)   // 新增
   adjustments     Adjustment[]
   member_services MemberService[]
   service_logs    ServiceLog[]

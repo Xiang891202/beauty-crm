@@ -1,5 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyToken } from '../utils/jwt';
+import { User } from '../types';
+import jwt from 'jsonwebtoken';
 // import { error } from 'node:console';
 
 //身分驗證中間件
@@ -33,4 +35,19 @@ export const roleMiddleware  = (allowedRoles: string[]) => {
     }
     next();
   };
+};
+
+export const authMiddleware = (req: Request, res: Response, next: NextFunction) => {
+  const token = req.headers.authorization?.split(' ')[1];
+  if (!token) {
+    return res.status(401).json({ message: 'No token provided' });
+  }
+
+  try {
+    const decoded = jwt.verify(token, process.env.JWT_SECRET!) as User;
+    (req as any).user = decoded;
+    next();
+  } catch (err) {
+    return res.status(401).json({ message: 'Invalid token' });
+  }
 };

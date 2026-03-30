@@ -1,13 +1,13 @@
 <template>
   <div class="login-container">
     <form @submit.prevent="handleLogin">
-      <h2>管理员登录</h2>
+      <h2>管理员登入</h2>
       <div>
-        <label>邮箱</label>
+        <label>郵箱</label>
         <input v-model="email" type="email" required />
       </div>
       <div>
-        <label>密码</label>
+        <label>密碼</label>
         <input v-model="password" type="password" required />
       </div>
       <button type="submit" :disabled="loading">登录</button>
