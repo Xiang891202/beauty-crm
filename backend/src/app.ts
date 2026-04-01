@@ -5,6 +5,7 @@ import { errorHandler } from './middleware/error.middleware';
 import  publicRoutrs  from './routes/public.routes';
 import serviceLogRoutes from './routes/service_log.routes';
 import adjustmentRoutes from './routes/adjustment.routes';
+import statsRoutes from './routes/stats.routes';
 
 const app = express();
 
@@ -18,6 +19,7 @@ app.use('/api', routes);
 app.use('/api', publicRoutrs);
 app.use('/api/', serviceLogRoutes);
 app.use('/api/', adjustmentRoutes);
+app.use('/api/', statsRoutes);
 // 全域錯誤處理
 app.use(errorHandler);
 

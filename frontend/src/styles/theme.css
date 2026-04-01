@@ -9,6 +9,12 @@
   --border: #f0e4d0;
   --shadow: 0 8px 20px rgba(0,0,0,0.05);
   --radius: 20px;
+  --el-color-primary: #d4a373;        /* 暖杏色主色 */
+  --el-color-success: #6c9e6c;
+  --el-color-warning: #e9b35f;
+  --el-color-danger: #bc6c25;
+  --el-border-radius-base: 16px;
+  --el-box-shadow-base: 0 8px 24px rgba(0, 0, 0, 0.08);
 }
 
 body {

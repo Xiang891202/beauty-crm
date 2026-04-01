@@ -67,30 +67,33 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { getProducts, type Product } from '@/api/modules/product'; // 需先實現
 import http from '@/api/http';
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  stock: number;
-  description: string | null;
-}
-
 const products = ref<Product[]>([]);
+const loading = ref(false);
 const showForm = ref(false);
 const editing = ref(false);
 const form = ref<Partial<Product>>({ name: '', price: 0, stock: 0, description: null });
 
 const loadProducts = async () => {
+  loading.value = true;
   try {
-    const res = await http.get('/products');
-    products.value = res.data.data;
+    const res = await getProducts();
+    if (res.success && Array.isArray(res.data)) {
+      products.value = res.data;
+    } else {
+      products.value = [];
+    }
   } catch (err) {
     console.error('加載商品失敗', err);
+    products.value = [];
+  } finally {
+    loading.value = false;
   }
 };
 
+// 其餘函數類似 ServiceList
 const submitForm = async () => {
   try {
     if (editing.value && form.value.id) {

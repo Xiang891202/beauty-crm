@@ -27,15 +27,20 @@ const fetchLogs = async () => {
   loading.value = true;
   try {
     const res = await getMyServiceLogs();
-    logs.value = res.data.data;
+    if (res.success && Array.isArray(res.data)) {
+      logs.value = res.data;
+    } else {
+      logs.value = [];
+    }
   } catch (err) {
-    console.error(err);
+    console.error('取得使用紀錄失敗', err);
+    logs.value = [];
   } finally {
     loading.value = false;
   }
 };
 
-const formatDate = (date: string) => new Date(date).toLocaleString();
+const formatDate = (date: string) => new Date(date).toLocaleDateString();
 
 onMounted(fetchLogs);
 </script>

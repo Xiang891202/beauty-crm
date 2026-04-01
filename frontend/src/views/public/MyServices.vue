@@ -8,7 +8,7 @@
         <h3>{{ svc.service.name }}</h3>
         <p>剩餘次數：{{ svc.remaining_sessions }}</p>
         <p>購買日期：{{ formatDate(svc.purchased_at) }}</p>
-        <BaseButton size="small" @click="useService(svc)">立即使用</BaseButton>
+        <!-- <BaseButton size="small" @click="useService(svc)">立即使用</BaseButton> -->
       </div>
     </div>
 
@@ -28,7 +28,7 @@
 import { ref, onMounted } from 'vue';
 import { getMyServices } from '@/api/modules/service';
 import UseService from '@/views/admin/usage/UseService.vue';
-import BaseButton from '@/components/common/BaseButton.vue';
+// import BaseButton from '@/components/common/BaseButton.vue';
 import BaseModal from '@/components/common/BaseModal.vue';
 
 const services = ref<any[]>([]);
@@ -41,19 +41,24 @@ const fetchServices = async () => {
   loading.value = true;
   try {
     const res = await getMyServices();
-    services.value = res.data.data;
-    if (services.value.length) customerId.value = services.value[0].customer_id;
+    if (res.success && Array.isArray(res.data)) {
+      services.value = res.data;
+    } else {
+      services.value = [];
+    }
+    if (services.value.length) customerId.value = services.value[0].customer_id; // 假設同一會員的服務包 customer_id 一致
   } catch (err) {
-    console.error(err);
+    console.error('取得療程包失敗', err);
+    services.value = [];
   } finally {
     loading.value = false;
   }
 };
 
-const useService = (svc: any) => {
-  selectedServiceId.value = svc.id;
-  showUseModal.value = true;
-};
+// const useService = (svc: any) => {
+//   selectedServiceId.value = svc.id;
+//   showUseModal.value = true;
+// };
 
 const onServiceUsed = () => {
   showUseModal.value = false;

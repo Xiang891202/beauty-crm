@@ -29,7 +29,8 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import http from '@/api/http';
+import { getServices } from '@/api/modules/service';
+import { createMemberService } from '@/api/modules/member_service';
 
 const props = defineProps<{ memberId: number }>();
 const emit = defineEmits(['success', 'close']);
@@ -45,10 +46,13 @@ const message = ref('');
 const isError = ref(false);
 
 onMounted(async () => {
-  // 加载服务列表
   try {
-    const res = await http.get('/services');
-    services.value = res.data.data;
+    const res = await getServices();
+    if (res.success && Array.isArray(res.data)) {
+      services.value = res.data;
+    } else {
+      services.value = [];
+    }
   } catch (err) {
     console.error('加載服務失敗', err);
     message.value = '加載服務列表失敗';
@@ -74,10 +78,9 @@ const handleSubmit = async () => {
       total_sessions: form.value.total_sessions,
       expiry_date: form.value.expiry_date || undefined,
     };
-    const res = await http.post('/member-services', payload);
-    emit('success', res.data.data);
+    const res = await createMemberService(payload);
+    emit('success', res.data);
     message.value = '購買成功！';
-    // 清空表单（可选）
     form.value = { service_id: null, total_sessions: 1, expiry_date: '' };
   } catch (err: any) {
     console.error(err);

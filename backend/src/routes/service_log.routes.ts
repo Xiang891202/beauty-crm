@@ -15,6 +15,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.use(authenticate);
 
+// 客戶查看自己的使用記錄
+router.get('/customers/me/service-logs', usageController.getMyServiceLogs);  // 假設 controller 中有此函數
+
 // 創建使用記錄
 router.post(
   '/',
@@ -27,8 +30,6 @@ router.post(
 // 獲取使用記錄列表
 router.get('/', validate(listUsagesQuerySchema, 'query'), usageController.listUsages);
 
-// 客戶查看自己的使用記錄
-router.get('/customers/me/service-logs', usageController.getMyServiceLogs);  // 假設 controller 中有此函數
 
 // 獲取單筆記錄
 router.get('/:id', usageController.getUsage);

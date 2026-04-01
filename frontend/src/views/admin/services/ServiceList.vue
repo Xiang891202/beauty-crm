@@ -68,32 +68,32 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
+import { getServices, type Service } from '@/api/modules/service'; // 需先實現此 API
 import http from '@/api/http';
 
-interface Service {
-  id: number;
-  name: string;
-  price: number;
-  duration_minutes: number;
-  description: string | null;
-}
-
 const services = ref<Service[]>([]);
+const loading = ref(false);
 const showForm = ref(false);
 const editing = ref(false);
 const form = ref<Partial<Service>>({ name: '', price: 0, duration_minutes: 60, description: null });
 
-// 加载服务列表
 const loadServices = async () => {
+  loading.value = true;
   try {
-    const res = await http.get('/services');
-    services.value = res.data.data;
+    const res = await getServices();
+    if (res.success && Array.isArray(res.data)) {
+      services.value = res.data;
+    } else {
+      services.value = [];
+    }
   } catch (err) {
     console.error('加載服務失敗', err);
+    services.value = [];
+  } finally {
+    loading.value = false;
   }
 };
 
-// 提交表单
 const submitForm = async () => {
   try {
     if (editing.value && form.value.id) {
@@ -108,14 +108,12 @@ const submitForm = async () => {
   }
 };
 
-// 编辑
 const editService = (service: Service) => {
   editing.value = true;
   form.value = { ...service };
   showForm.value = true;
 };
 
-// 删除
 const deleteService = async (id: number) => {
   if (!confirm('確定刪除此服務嗎？')) return;
   try {
@@ -132,9 +130,7 @@ const closeForm = () => {
   form.value = { name: '', price: 0, duration_minutes: 60, description: null };
 };
 
-onMounted(() => {
-  loadServices();
-});
+onMounted(loadServices);
 </script>
 
 <style scoped>

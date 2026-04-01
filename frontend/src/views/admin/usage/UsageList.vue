@@ -66,7 +66,6 @@ const logs = ref([]);
 const loading = ref(false);
 const error = ref('');
 
-// 篩選條件
 const filters = ref({
   customer_id: '',
   service_id: '',
@@ -86,17 +85,20 @@ const fetchLogs = async () => {
       page: page.value,
       limit,
     };
-    // 移除空字串參數
     Object.keys(params).forEach(key => {
       if (params[key] === '') delete params[key];
     });
     const res = await getUsageList(params);
-    // 假設後端返回 { success: true, data: { items: [], total: number } }
-    logs.value = res.data.data.items;
-    totalPages.value = Math.ceil(res.data.data.total / limit);
+    if (res.success && res.data) {
+      logs.value = res.data.items || [];
+      totalPages.value = Math.ceil((res.data.total || 0) / limit);
+    } else {
+      logs.value = [];
+    }
   } catch (err) {
     console.error(err);
-    error.value = err.response?.data?.error || '載入失敗';
+    error.value = err?.response?.data?.error || '載入失敗';
+    logs.value = [];
   } finally {
     loading.value = false;
   }
@@ -108,14 +110,13 @@ const resetFilters = () => {
   fetchLogs();
 };
 
+// ✅ 定義 formatDate 函數
 const formatDate = (dateStr) => {
   if (!dateStr) return '-';
   return new Date(dateStr).toLocaleString();
 };
 
-// 監聽頁碼變化重新載入
 watch(page, fetchLogs);
-// 初始載入
 fetchLogs();
 </script>
 

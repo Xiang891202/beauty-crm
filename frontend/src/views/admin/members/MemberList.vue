@@ -41,7 +41,7 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getMembers, createMember as createMemberApi } from '@/api/modules/member'; // 需要实现此 API
+import { getMembers, createMember as createMemberApi, type Member } from '@/api/modules/member';
 import BaseButton from '@/components/common/BaseButton.vue';
 import BaseModal from '@/components/common/BaseModal.vue';
 import MemberForm from '@/views/admin/members/MemberForm.vue';
@@ -50,13 +50,7 @@ import { useAuthStore } from '@/stores/auth.store';
 const authStore = useAuthStore();
 const loading = ref(true);
 
-interface Member {
-  id: number;
-  name: string;
-  phone: string | null;
-  birthday: string | null;
-}
-
+// 刪除本地 interface Member，使用導入的 Member 類型
 const members = ref<Member[]>([]);
 const showCreateModal = ref(false);
 
@@ -67,33 +61,38 @@ const createMember = () => {
 const closeModel = () => {
   showCreateModal.value = false;
 };
+
 const handleCreate = async (formData: any) => {
   try {
-    await createMemberApi(formData); // 需要实现此 API
+    await createMemberApi(formData);
     closeModel();
-    // 刷新会员列表
     await fetchMembers();
-    // members.value = res.data.data; // 根据后端响应结构调整
   } catch (err) {
     console.error('新增會員失敗', err);
   }
 };
 
 const fetchMembers = async () => {
+  loading.value = true;
   try {
     const res = await getMembers();
-    members.value = res.data.data; // 根据后端响应结构调整
+    if (res.success && Array.isArray(res.data)) {
+      members.value = res.data;
+    } else {
+      members.value = [];
+    }
   } catch (err) {
-    console.error('Failed to fetch members', err);
+    console.error('取得會員列表失敗', err);
+    members.value = [];
+  } finally {
+    loading.value = false;
   }
 };
 
 onMounted(async () => {
   await authStore.restoreSession();
   await fetchMembers();
-  loading.value = false;
 });
-
 </script>
 
 <style scoped>

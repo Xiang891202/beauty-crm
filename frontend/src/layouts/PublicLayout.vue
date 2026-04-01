@@ -1,42 +1,45 @@
 <template>
-  <div class="public-layout">
-    <header class="public-header">
-      <div class="logo">🌸 沐光美學</div>
+  <div>
+    <header>
       <nav>
         <router-link to="/">首頁</router-link>
         <router-link to="/services">服務項目</router-link>
-        <router-link to="/products">產品</router-link>
+        <router-link to="/products">商品</router-link>
         <router-link to="/contact">聯絡我們</router-link>
 
-        <!-- 客戶登入後顯示會員專區 -->
-        <template v-if="isLoggedIn && user?.role === 'customer'">
-          <router-link to="/my-services">我的服務包</router-link>
-          <router-link to="/my-logs">使用紀錄</router-link>
-          <button @click="logout" class="logout-btn">登出</button>
+        <!-- 根據登入狀態顯示不同內容 -->
+        <template v-if="authStore.isLoggedIn && authStore.user?.role === 'customer'">
+          <router-link to="/my-services">我的療程包</router-link>
+          <router-link to="/my-logs">使用記錄</router-link>
+          <button @click="handleLogout">登出</button>
         </template>
-
-        <router-link v-else to="/customer/login" class="login-btn">會員登入</router-link>
-        <!-- <button v-else @click="logout" class="logout-btn">登出</button> -->
+        <template v-else>
+          <router-link to="/customer/login">會員登入</router-link>
+        </template>
       </nav>
     </header>
-    <main><router-view /></main>
-    <footer class="footer">© 2026 沐光美學 | 綻放你的自信之美</footer>
+    <main>
+      <router-view />
+    </main>
   </div>
 </template>
 
-<script setup>
-import { computed } from 'vue';
+<script setup lang="ts">
+import { onMounted } from 'vue';
+import { useRouter } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
-import { useRoute } from 'vue-router';
 
-const auth = useAuthStore();
-const route = useRoute();
+const authStore = useAuthStore();
+const router = useRouter();
 
-const isLoggedIn = computed(() => !!auth.isLoggedIn);
-const user = computed(() => auth.user);
+onMounted(() => {
+  if (authStore.token && !authStore.isLoggedIn) {
+    authStore.restoreSession();
+  }
+});
 
-const logout = async() => {
-  await authStore.logout();
+const handleLogout = () => {
+  authStore.logout();
   router.push('/');
 };
 </script>

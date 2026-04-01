@@ -9,6 +9,10 @@
             {{ ms.service.name }}（剩餘 {{ ms.remaining_sessions }} 次）
           </option>
         </select>
+        <div>
+          <label>備註</label>
+          <textarea v-model="notes" rows="3" style="width: 100%;"></textarea>
+        </div>
       </div>
       <div>
         <label>簽名</label>
@@ -46,6 +50,8 @@ interface MemberService {
   };
 }
 
+const notes = ref('');
+
 const props = defineProps<{ memberId: number; preselectServiceId?: number }>();
 const emit = defineEmits(['success', 'close']);
 
@@ -61,7 +67,12 @@ let drawing = false;
 onMounted(async () => {
   try {
     const res = await getMemberServices(props.memberId);
-    memberServices.value = res.data.data.filter((ms: MemberService) => ms.remaining_sessions > 0);
+    // 修正：res 已是 { success, data }，data 是陣列
+    if (res.success && Array.isArray(res.data)) {
+      memberServices.value = res.data.filter((ms: MemberService) => ms.remaining_sessions > 0);
+    } else {
+      memberServices.value = [];
+    }
     if (memberServices.value.length === 0) {
       message.value = '此會員尚無有效服務方案';
       isError.value = true;
@@ -76,6 +87,7 @@ onMounted(async () => {
     message.value = '加載服務方案失敗';
     isError.value = true;
   }
+  // ... 繪圖初始化部分不變
 
   if (signatureCanvas.value) {
     ctx = signatureCanvas.value.getContext('2d');
@@ -164,11 +176,12 @@ const handleSubmit = async () => {
     formData.append('customer_id', String(props.memberId));
     formData.append('service_id', String(selectedMs.service_id));
     formData.append('signature', signatureFile);
-    // 可选备注
-    // if (notes.value) formData.append('notes', notes.value);
+    if (notes.value.trim()) {
+      formData.append('notes', notes.value);
+    }
 
     const res = await createUsage(formData);
-    const { remaining } = res.data.data;
+    const { remaining } = res.data;
 
     message.value = `使用成功！剩餘次數：${remaining}`;
     emit('success', { remaining });

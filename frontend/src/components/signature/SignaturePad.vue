@@ -1,90 +1,57 @@
-<!-- components/signature/SignaturePad.vue -->
 <template>
-  <div class="signature-pad">
-    <canvas ref="canvas" width="500" height="200" class="canvas"></canvas>
-    <div class="toolbar">
-      <button type="button" @click="clear">清除</button>
+  <div class="signature-container">
+    <canvas ref="canvas" class="signature-canvas" />
+    <div class="signature-actions">
+      <BaseButton @click="clear">清除</BaseButton>
+      <BaseButton @click="save">確認</BaseButton>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted } from 'vue'
+import SignaturePad from 'signature_pad'
 
-const canvas = ref<HTMLCanvasElement | null>(null);
-let ctx: CanvasRenderingContext2D | null = null;
-let drawing = false;
+const canvas = ref<HTMLCanvasElement | null>(null)
+let pad: SignaturePad | null = null
 
 onMounted(() => {
   if (canvas.value) {
-    ctx = canvas.value.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, canvas.value.width, canvas.value.height);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-    }
-    canvas.value.addEventListener('mousedown', startDrawing);
-    canvas.value.addEventListener('mousemove', draw);
-    canvas.value.addEventListener('mouseup', stopDrawing);
-    canvas.value.addEventListener('mouseleave', stopDrawing);
+    pad = new SignaturePad(canvas.value, {
+      backgroundColor: 'rgb(255, 255, 255)',
+      penColor: 'rgb(0, 0, 0)',
+      velocityFilterWeight: 0.7, // 支援壓感（部分觸控筆）
+      minWidth: 0.5,
+      maxWidth: 2.5
+    })
+    // 針對觸控筆優化
+    canvas.value.addEventListener('pointerdown', (e) => {
+      if (e.pointerType === 'pen') {
+        pad!.penColor = 'rgb(0, 0, 255)' // 可變換顏色區分
+      }
+    })
   }
-});
+})
 
-const startDrawing = (e: MouseEvent) => {
-  drawing = true;
-  const rect = canvas.value!.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  ctx!.beginPath();
-  ctx!.moveTo(x, y);
-  ctx!.lineTo(x, y);
-  ctx!.stroke();
-};
-
-const draw = (e: MouseEvent) => {
-  if (!drawing) return;
-  const rect = canvas.value!.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  ctx!.lineTo(x, y);
-  ctx!.stroke();
-  ctx!.beginPath();
-  ctx!.moveTo(x, y);
-};
-
-const stopDrawing = () => { drawing = false; ctx!.beginPath(); };
-const clear = () => {
-  if (ctx && canvas.value) {
-    ctx.clearRect(0, 0, canvas.value.width, canvas.value.height);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, canvas.value.width, canvas.value.height);
+const clear = () => pad?.clear()
+const save = () => {
+  if (pad && !pad.isEmpty()) {
+    const signatureData = pad.toDataURL()
+    // 透過 emit 傳回上層
+    emit('save', signatureData)
+  } else {
+    alert('請先簽名')
   }
-};
-const getSignatureBlob = (): Promise<Blob> => {
-  return new Promise((resolve) => {
-    canvas.value!.toBlob((blob) => resolve(blob!));
-  });
-};
-defineExpose({ clear, getSignatureBlob });
+}
+
+const emit = defineEmits<{ (e: 'save', data: string): void }>()
 </script>
 
 <style scoped>
-.signature-pad {
-  background: white;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-}
-.canvas {
+.signature-canvas {
+  border: 1px solid #ccc;
   width: 100%;
-  height: auto;
-  background: white;
-  border-radius: var(--radius);
-  cursor: crosshair;
-}
-.toolbar {
-  margin-top: 0.5rem;
-  text-align: right;
+  height: 200px;
+  touch-action: none; /* 避免觸控時頁面滾動 */
 }
 </style>

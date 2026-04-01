@@ -3,7 +3,7 @@
     <h2>會員詳細</h2>
     <p>會員 ID: {{ member.id }}</p>
     <p>姓名: {{ member.name }}</p>
-    <p>電話: {{ member.phone }}</p>
+    <p>電話: {{ member.phone || '-' }}</p>
 
     <h3>服務包</h3>
     <ul v-if="activeServices.length">
@@ -28,7 +28,6 @@
       />
     </BaseModal>
 
-    <!-- 购买服务模态框 -->
     <BaseModal v-model="showPurchaseModal" title="購買新服務">
       <PurchaseService
         :member-id="Number(member.id)"
@@ -42,16 +41,15 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue';
 import { useRoute } from 'vue-router';
-import { getMemberDetail, getMemberServices } from '@/api/modules/member';
+import { getMember, getMemberServices, type Member } from '@/api/modules/member';
 import UseService from '../usage/UseService.vue';
 import PurchaseService from '../usage/PurchaseService.vue';
 import BaseButton from '@/components/common/BaseButton.vue';
 import BaseModal from '@/components/common/BaseModal.vue';
 
 const route = useRoute();
-const member = ref({ id: 0, name: '', phone: '' });
+const member = ref<Member>({ id: 0, name: '', phone: null });
 const memberServices = ref<any[]>([]);
-//計算屬性 只顯示有效次數
 const activeServices = computed(() => {
   return memberServices.value.filter(ms => ms.remaining_sessions > 0);
 });
@@ -61,25 +59,37 @@ const selectedServiceId = ref<number | undefined>();
 
 const loadMember = async () => {
   const id = Number(route.params.id);
-  const res = await getMemberDetail(id);
-  member.value = res.data.data;
+  try {
+    const res = await getMember(id);
+    if (res.success) {
+      member.value = res.data;
+    }
+  } catch (err) {
+    console.error('載入會員失敗', err);
+  }
 };
 
 const loadServices = async () => {
   const id = Number(route.params.id);
-  const res = await getMemberServices(id);
-  memberServices.value = res.data.data;
+  try {
+    const res = await getMemberServices(id);
+    if (res.success) {
+      memberServices.value = res.data;
+    }
+  } catch (err) {
+    console.error('載入服務包失敗', err);
+  }
 };
 
 const onServiceUsed = () => {
   showUseService.value = false;
-  loadServices(); // 重新加载服务包列表
+  loadServices();
   selectedServiceId.value = undefined;
 };
 
 const onPurchaseSuccess = () => {
   showPurchaseModal.value = false;
-  loadServices(); // 刷新服务包列表
+  loadServices();
 };
 
 const useService = (memberServiceId: number) => {

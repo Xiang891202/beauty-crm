@@ -5,7 +5,6 @@
       <button @click="showForm = true">新增補償</button>
     </div>
 
-    <!-- 筛选栏（可选） -->
     <div class="filters">
       <input v-model="filters.member_service_id" type="number" placeholder="服務授權 ID" />
       <select v-model="filters.adjustment_type">
@@ -19,7 +18,6 @@
       <button @click="resetFilters">重置</button>
     </div>
 
-    <!-- 调整记录表格 -->
     <table class="adjustment-table">
       <thead>
         <tr>
@@ -33,7 +31,8 @@
         </tr>
       </thead>
       <tbody>
-        <tr v-for="adj in adjustments" :key="adj.id">
+        <!-- 使用 adjustments.items 遍歷 -->
+        <tr v-for="adj in adjustments.items" :key="adj.id">
           <td>{{ adj.id }}</td>
           <td>{{ adj.member_service_id }}</td>
           <td>{{ adj.adjustment_type === 'INCREASE' ? '增加' : '減少' }}</td>
@@ -42,20 +41,19 @@
           <td>{{ adj.created_by }}</td>
           <td>{{ formatDate(adj.created_at) }}</td>
         </tr>
-        <tr v-if="adjustments.length === 0">
+        <tr v-if="adjustments.items.length === 0">
           <td colspan="7">暫無調整記錄</td>
         </tr>
       </tbody>
     </table>
 
-    <!-- 分页（可选，后端支持） -->
     <div class="pagination" v-if="totalPages > 1">
       <button :disabled="page === 1" @click="page--">上一頁</button>
       <span>第 {{ page }} 頁 / 共 {{ totalPages }} 頁</span>
       <button :disabled="page === totalPages" @click="page++">下一頁</button>
     </div>
 
-    <!-- 新增调整表单模态框 -->
+    <!-- 新增表單模態框 -->
     <div v-if="showForm" class="modal">
       <div class="modal-content">
         <h3>新增人工補償</h3>
@@ -92,19 +90,14 @@
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
-import http from '@/api/http';
+import { getAdjustments, createAdjustment, type Adjustment } from '@/api/modules/adjustment';
 
-interface Adjustment {
-  id: number;
-  member_service_id: number;
-  adjustment_type: 'INCREASE' | 'DECREASE';
-  amount: number;
-  reason: string | null;
-  created_by: number;
-  created_at: string;
-}
+// 數據結構修正：使用包含 items 和 total 的對象
+const adjustments = ref<{ items: Adjustment[]; total: number }>({
+  items: [],
+  total: 0
+});
 
-const adjustments = ref<Adjustment[]>([]);
 const page = ref(1);
 const limit = 20;
 const totalPages = ref(1);
@@ -119,27 +112,33 @@ const filters = ref({
 const showForm = ref(false);
 const adjustForm = ref({
   member_service_id: null as number | null,
-  adjustment_type: 'INCREASE',
+  adjustment_type: 'INCREASE' as 'INCREASE' | 'DECREASE',
   amount: 1,
   reason: '',
 });
 
 const loadAdjustments = async () => {
   try {
-    const params: any = {
-      page: page.value,
-      limit,
-    };
+    const params: any = { page: page.value, limit };
     if (filters.value.member_service_id) params.member_service_id = filters.value.member_service_id;
     if (filters.value.adjustment_type) params.adjustment_type = filters.value.adjustment_type;
     if (filters.value.startDate) params.startDate = filters.value.startDate;
     if (filters.value.endDate) params.endDate = filters.value.endDate;
 
-    const res = await http.get('/adjustments', { params });
-    adjustments.value = res.data.data.items;
-    totalPages.value = Math.ceil(res.data.data.total / limit);
+    const res = await getAdjustments(params);
+    if (res.success && res.data) {
+      // ✅ 正確賦值對象
+      adjustments.value = {
+        items: res.data.items || [],
+        total: res.data.total || 0
+      };
+      totalPages.value = Math.ceil(adjustments.value.total / limit);
+    } else {
+      adjustments.value = { items: [], total: 0 };
+    }
   } catch (err) {
     console.error('加載調整記錄失敗', err);
+    adjustments.value = { items: [], total: 0 };
   }
 };
 
@@ -149,7 +148,7 @@ const submitAdjustment = async () => {
     return;
   }
   try {
-    await http.post('/adjustments', {
+    await createAdjustment({
       member_service_id: adjustForm.value.member_service_id,
       adjustment_type: adjustForm.value.adjustment_type,
       amount: adjustForm.value.amount,
@@ -169,21 +168,18 @@ const resetFilters = () => {
   loadAdjustments();
 };
 
-const formatDate = (dateStr: string) => {
-  if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
-};
-
 const closeForm = () => {
   showForm.value = false;
   adjustForm.value = { member_service_id: null, adjustment_type: 'INCREASE', amount: 1, reason: '' };
 };
 
-watch(page, loadAdjustments);
+const formatDate = (dateStr: string) => {
+  if (!dateStr) return '-';
+  return new Date(dateStr).toLocaleString();
+};
 
-onMounted(() => {
-  loadAdjustments();
-});
+watch(page, loadAdjustments);
+onMounted(loadAdjustments);
 </script>
 
 <style scoped>
