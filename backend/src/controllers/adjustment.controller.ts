@@ -2,6 +2,7 @@
 import { Request, Response } from 'express';
 import { AdjustmentService } from '../services/adjustment.service';
 import { successResponse, errorResponse } from '../utils/response';
+import prisma from '../config/prisma';
 
 const adjustmentService = new AdjustmentService();
 
@@ -52,5 +53,28 @@ export const listAdjustments = async (req: Request, res: Response) => {
     const status = error.status || 400;
     // errorResponse(res, 400, error.message);
     res.status(status).json(errorResponse(error.message, status));
+  }
+};
+
+// backend/src/controllers/adjustment.controller.ts
+export const getMyAdjustments = async (req: Request, res: Response) => {
+  try {
+    const customerId = (req as any).user.id;
+    // 1. 先查出該客戶的所有 member_service id
+    const memberServices = await prisma.memberService.findMany({
+      where: { customer_id: customerId },
+      select: { id: true },
+    });
+    const memberServiceIds = memberServices.map(ms => ms.id);
+    // 2. 查詢調整紀錄，條件為 member_service_id 在這些 id 中
+    const adjustments = await prisma.adjustment.findMany({
+      where: { member_service_id: { in: memberServiceIds } },
+      include: { member_service: { include: { service: true } } },
+      orderBy: { created_at: 'desc' },
+    });
+    res.json(successResponse(adjustments));
+  } catch (err) {
+    console.error('Error in getMyAdjustments:', err);
+    res.status(500).json(errorResponse('無法取得調整紀錄', 500));
   }
 };

@@ -14,6 +14,7 @@ export const createUsage = async (req: Request, res: Response) => {
     const createdBy = (req as any).user?.id;
     const signatureFile = req.file;
 
+    //1. 驗證必要欄位
     if (!createdBy) throw new Error('Unauthorized');
     if (!member_service_id || !customer_id) {
       throw new Error('缺少必要欄位: member_service_id 或 customer_id');
@@ -88,5 +89,21 @@ export const updateUsageNotes = async (req: Request, res: Response) => {
   } catch (error: any) {
     const status = error.status || 400;
     res.status(status).json(errorResponse(error.message, status));
+  }
+};
+
+// backend/src/controllers/service_log.controller.ts
+export const getMyServiceLogs = async (req: Request, res: Response) => {
+  try {
+    const customerId = (req as any).user.id;
+    const logs = await prisma.serviceLog.findMany({
+      where: { customer_id: customerId },
+      include: { service: true, member_service: true },
+      orderBy: { used_at: 'desc' }
+    });
+    res.json(successResponse(logs));
+  } catch (err) {
+    console.error('Error in getMyServiceLogs:', err);
+    res.status(500).json(errorResponse('無法取得使用紀錄', 500));
   }
 };

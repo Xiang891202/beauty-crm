@@ -1,8 +1,8 @@
+// frontend/src/stores/auth.store.ts
 import { defineStore } from 'pinia';
 import { ref, computed } from 'vue';
-import { getProfile, login as loginApi, logout as logoutApi } from '@/api/modules/auth';
+import { getProfile, login as loginApi, logout as logoutApi, customerLogin as customerLoginApi } from '@/api/modules/auth';
 import type { User } from '@/types';
-// import { t } from 'vue-router/dist/index-BzEKChPW.js';
 
 export const useAuthStore = defineStore('auth', () => {
   const user = ref<User | null>(null);
@@ -12,17 +12,36 @@ export const useAuthStore = defineStore('auth', () => {
   const isAdmin = computed(() => user.value?.role === 'admin');
 
   function setAuth(data: { user: User; token: string }) {
-    user.value = data.user;
+    const userWithRole = {
+      ...data.user,
+      role: data.user.role || 'customer', // 确保用户对象有 role 属性，默认为 'customer'
+    }
+    user.value = userWithRole;
     token.value = data.token;
     localStorage.setItem('token', data.token);
+    localStorage.setItem('user', JSON.stringify(userWithRole));
   }
 
   async function login(credentials: { email: string; password: string }) {
     try {
       const res = await loginApi(credentials.email, credentials.password);
-      setAuth(res.data); // 假设后端返回 { user, token }
+      setAuth(res.data);
       return res;
     } catch (error) {
+      console.error('登入失敗', error);
+      throw error;
+    }
+  }
+
+  async function customerLogin(phone: string, password: string) {
+    try {
+      const res = await customerLoginApi(phone, password);
+      const userData = res.data.user;
+      if (!userData.role) userData.role = 'customer'; // 确保客户用户对象有 role 属性，默认为 'customer'
+      setAuth({ user: userData, token: res.data.token });
+      return res;
+    } catch (error) {
+      console.error('客戶登入失敗', error);
       throw error;
     }
   }
@@ -30,28 +49,31 @@ export const useAuthStore = defineStore('auth', () => {
   async function logout() {
     try {
       await logoutApi();
+    } catch (error) {
+      console.error('登出 API 失敗', error);
     } finally {
       user.value = null;
       token.value = null;
       localStorage.removeItem('token');
+      localStorage.removeItem('user');
     }
   }
 
-  function restoreSession(): Promise<void> {
+  async function restoreSession(): Promise<void> {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       token.value = storedToken;
-      return getProfile().then(res => {
-        user.value = res.data; // 假设后端返回用户信息
-      }).catch(() => {
-        // 如果获取用户信息失败，可能是 token 无效，清除 session
+      try {
+        const res = await getProfile();
+        user.value = res.data;
+        localStorage.setItem('user', JSON.stringify(res.data));
+      } catch (error) {
+        console.error('還原 session 失敗', error);
         token.value = null;
         localStorage.removeItem('token');
-        logout();
-      });
-      // 可选：调用获取用户信息的接口，设置 user.value
+        localStorage.removeItem('user');
+      }
     }
-    return Promise.resolve();
   }
 
   return {
@@ -60,6 +82,7 @@ export const useAuthStore = defineStore('auth', () => {
     isLoggedIn,
     isAdmin,
     login,
+    customerLogin,
     logout,
     restoreSession,
   };

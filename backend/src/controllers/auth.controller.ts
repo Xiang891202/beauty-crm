@@ -1,8 +1,10 @@
-import { Request, Response } from 'express';
-import * as authService from '../services/auth.service';
+import { Request, Response, NextFunction } from 'express';
+import { AuthService } from '../services/auth.service';
 import { successResponse, errorResponse } from '../utils/response';
-import { loginSchema } from '../validators/auth.validator';
+import { customerLoginSchema } from '../validators/auth.validator';
+import { validate } from '../middleware/validate.middleware';
 import { generateToken } from '../utils/jwt'
+import { ApiError } from '../types/errors';
 // import '../types/express.d.ts'; // 确保全局类型扩展被加载
 
 // export const login = async (req: Request, res: Response) => {
@@ -26,6 +28,8 @@ import { generateToken } from '../utils/jwt'
 //   }
 // };
 
+const authService = new AuthService();
+
 //硬編碼認證 測試登入接口返回 token 值
 
 export const login = async (req: Request, res: Response) => {
@@ -48,4 +52,29 @@ export const register = async (req: Request, res: Response) => {
 
 export const getProfile = async (req: Request, res: Response) => {
   res.json({ success: true, data: (req as any).user });
+};
+
+//新增客戶登入控制器
+export const customerLogin = async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { phone, password } = req.body;
+
+    // 調用 service 驗證客戶
+    const customer = await authService.validateCustomer(phone, password);
+    if (!customer) {
+      throw new ApiError(401, '電話號碼或密碼錯誤');
+    }
+
+    // 生成 JWT token
+    const token = generateToken({ 
+      id: customer.id, 
+      phone: customer.phone,
+      email: customer.email, 
+      role: 'customer'
+    });
+
+    res.json(successResponse({ token, user: customer }));
+  } catch (err) {
+    next(err);
+  }
 };

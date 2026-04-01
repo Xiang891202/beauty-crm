@@ -1,0 +1,18 @@
+:root {
+  --primary: #e8c5b0;    /* 奶茶色 */
+  --primary-dark: #d4b09a;
+  --secondary: #f9e5d6;   /* 柔粉 */
+  --accent: #b47c5e;      /* 暖棕色 */
+  --text: #4a3b2f;
+  --text-light: #8b6b55;
+  --bg-light: #fffcf9;
+  --border: #f0e4d0;
+  --shadow: 0 8px 20px rgba(0,0,0,0.05);
+  --radius: 20px;
+}
+
+body {
+  font-family: 'Quicksand', 'Segoe UI', 'Helvetica Neue', sans-serif;
+  color: var(--text);
+  background: var(--bg-light);
+}

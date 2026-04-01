@@ -10,6 +10,7 @@ export interface Member {
   gender?: string;
   address?: string;
   notes?: string;
+  password_hash?: string; // 用於存儲密碼哈希，實際使用時應該放在客戶表中
   created_at?: Date;
   updated_at?: Date;
 }
@@ -30,12 +31,12 @@ export const getMemberById = async (id: number): Promise<Member | null> => {
 export const createMember = async (
   data: Omit<Member, 'id' | 'created_at' | 'updated_at'>
 ): Promise<Member> => {
-  const { name, phone, birthday, notes } = data;
+  const { name, phone, birthday, notes, password_hash } = data;
   const res = await pool.query(
-    `INSERT INTO customers (name, phone, birthday, notes)
-     VALUES ($1, $2, $3, $4)
+    `INSERT INTO customers (name, phone, birthday, notes, password_hash)
+     VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-    [name, phone || null, birthday || null, notes || null]
+    [name, phone || null, birthday || null, notes || null, password_hash || null]
   );
   return res.rows[0];
 };

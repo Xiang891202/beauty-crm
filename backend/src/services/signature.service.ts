@@ -12,7 +12,7 @@ export class SignatureService {
     // 2. 生成唯一文件名
     const fileExt = file.originalname.split('.').pop() || 'png';
     const fileName = `${randomUUID()}.${fileExt}`;
-    const filePath = `signatures/${fileName}`;
+    const filePath = `${fileName}`;
 
     // 3. 上传到 Supabase Storage
     const { data, error } = await supabase.storage

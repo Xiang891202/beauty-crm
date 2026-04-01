@@ -12,3 +12,8 @@ export const logout = () => {
 export const getProfile = () => {
   return http.get('/auth/profile');
 };
+
+// api/modules/auth.ts
+export const customerLogin = (phone: string, password: string) => {
+  return http.post('/auth/customer/login', { phone, password });
+};

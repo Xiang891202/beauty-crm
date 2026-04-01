@@ -67,4 +67,15 @@ const updateValue = (event: Event) => {
   margin-top: 0.25rem;
   display: block;
 }
+
+.input, .textarea {
+  border-radius: var(--radius);
+  border: 1px solid var(--border);
+  background: white;
+  padding: 12px 16px;
+}
+.input:focus, .textarea:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(232,197,176,0.2);
+}
 </style>

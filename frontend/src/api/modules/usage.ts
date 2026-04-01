@@ -10,3 +10,8 @@ export const createUsage = (formData: FormData) => {
 export const getUsageList = (params: any) => {
   return http.get('/service-logs', { params });
 };
+
+// api/modules/usage.ts
+export const getMyServiceLogs = () => {
+  return http.get('/customers/me/service-logs');
+};

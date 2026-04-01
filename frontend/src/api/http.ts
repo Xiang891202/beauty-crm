@@ -1,19 +1,19 @@
 import axios from 'axios';
 
 const http = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000/api',
-  timeout: 10000,
+  baseURL: '/api',
+  headers: { 'Content-Type': 'application/json' },
 });
 
-http.interceptors.request.use(
-  (config) => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
+http.interceptors.request.use((config) => {
+  const token = localStorage.getItem('token');
+  if (token) config.headers.Authorization = `Bearer ${token}`;
+  return config;
+});
+
+http.interceptors.response.use(
+  (res) => res.data,
+  (err) => Promise.reject(err.response?.data || err.message)
 );
 
 export default http;

@@ -1,7 +1,6 @@
-// src/routes/adjustment.routes.ts
+// backend/src/routes/adjustment.routes.ts
 import { Router } from 'express';
 import { authenticate, roleMiddleware } from '../middleware/auth.middleware';
-// import { roleMiddleware } from '../middleware/role.middleware';
 import * as adjustmentController from '../controllers/adjustment.controller';
 import { validate } from '../middleware/validate.middleware';
 import {
@@ -13,22 +12,21 @@ const router = Router();
 
 router.use(authenticate);
 
-// 创建修正记录（管理员或特定权限）
+// 創建調整記錄
 router.post(
   '/',
-  roleMiddleware(['admin']), // 通常修正权限更严格
+  roleMiddleware(['admin']),
   validate(createAdjustmentSchema, 'body'),
   adjustmentController.createAdjustment
 );
 
-// 列表查询
-router.get(
-  '/',
-  validate(listAdjustmentsQuerySchema, 'query'),
-  adjustmentController.listAdjustments
-);
+// 列表查詢
+router.get('/', validate(listAdjustmentsQuerySchema, 'query'), adjustmentController.listAdjustments);
 
-// 获取单条
+// 獲取單筆
 router.get('/:id', adjustmentController.getAdjustment);
+
+// 客戶查看自己的調整紀錄
+router.get('/customers/me/adjustments', adjustmentController.getMyAdjustments);
 
 export default router;
