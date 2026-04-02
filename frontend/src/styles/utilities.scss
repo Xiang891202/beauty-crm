@@ -1,0 +1,60 @@
+// cat > frontend/src/styles/utilities.scss << 'EOF'
+@import './variables';
+@import './mixins';
+
+// 容器
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+}
+
+// 網格
+.grid {
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+// 文字
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-primary { color: var(--primary); }
+.text-accent { color: var(--accent); }
+.text-muted { color: $text-muted; }
+
+// 間距
+@each $key, $val in $spacers {
+  .mt-#{$key} { margin-top: $val; }
+  .mb-#{$key} { margin-bottom: $val; }
+  .ml-#{$key} { margin-left: $val; }
+  .mr-#{$key} { margin-right: $val; }
+  .pt-#{$key} { padding-top: $val; }
+  .pb-#{$key} { padding-bottom: $val; }
+  .pl-#{$key} { padding-left: $val; }
+  .pr-#{$key} { padding-right: $val; }
+  .p-#{$key} { padding: $val; }
+  .m-#{$key} { margin: $val; }
+}
+
+// 彈性佈局
+.flex { display: flex; }
+.flex-col { flex-direction: column; }
+.items-center { align-items: center; }
+.justify-between { justify-content: space-between; }
+.justify-center { justify-content: center; }
+.gap-2 { gap: 0.5rem; }
+.gap-3 { gap: 1rem; }
+.gap-4 { gap: 1.5rem; }
+
+// 卡片通用樣式
+.card {
+  background: var(--surface);
+  border-radius: $radius;
+  box-shadow: $shadow;
+  overflow: hidden;
+  transition: $transition-base;
+  @include card-hover;
+}
+// EOF

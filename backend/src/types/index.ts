@@ -17,6 +17,8 @@ export interface Service {
   description?: string;
   price: number;
   duration_minutes: number;   // 新增
+  image_url?: string;        // 新增
+  deleted_at?: Date | null;
   created_at?: Date;
   updated_at?: Date;
 }

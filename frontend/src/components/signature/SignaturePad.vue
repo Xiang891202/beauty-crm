@@ -47,11 +47,3 @@ const save = () => {
 const emit = defineEmits<{ (e: 'save', data: string): void }>()
 </script>
 
-<style scoped>
-.signature-canvas {
-  border: 1px solid #ccc;
-  width: 100%;
-  height: 200px;
-  touch-action: none; /* 避免觸控時頁面滾動 */
-}
-</style>

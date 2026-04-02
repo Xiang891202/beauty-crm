@@ -2,6 +2,9 @@
   <div>
     <div class="header">
       <h2>商品管理</h2>
+      <label>
+        <input type="checkbox" v-model="showDeleted" @change="loadProducts" /> 顯示已刪除
+      </label>
       <button @click="showForm = true">新增商品</button>
     </div>
 
@@ -13,6 +16,7 @@
           <th>價格</th>
           <th>庫存</th>
           <th>描述</th>
+          <th>狀態</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -24,12 +28,22 @@
           <td>{{ product.stock }}</td>
           <td>{{ product.description || '-' }}</td>
           <td>
-            <button @click="editProduct(product)">編輯</button>
-            <button @click="deleteProduct(product.id)">刪除</button>
+            <span v-if="product.deleted_at" class="deleted-badge">已刪除</span>
+            <span v-else class="active-badge">正常</span>
+          </td>
+          <td>
+            <template v-if="!product.deleted_at">
+              <button @click="editProduct(product)">編輯</button>
+              <button @click="softDelete(product.id)">軟刪除</button>
+            </template>
+            <template v-else>
+              <button @click="restoreProduct(product.id)">恢復</button>
+              <button @click="permanentDelete(product.id)">永久刪除</button>
+            </template>
           </td>
         </tr>
         <tr v-if="products.length === 0">
-          <td colspan="6">暫無商品資料</td>
+          <td colspan="7">暫無商品資料</td>
         </tr>
       </tbody>
     </table>
@@ -55,8 +69,20 @@
             <label>描述</label>
             <textarea v-model="form.description"></textarea>
           </div>
+          <div>
+            <label>商品圖片</label>
+            <input type="file" @change="onFileChange" accept="image/*" />
+            <div v-if="imagePreview" class="preview">
+              <img :src="imagePreview" style="max-width: 200px; margin-top: 8px;" />
+            </div>
+            <div v-else-if="form.image_url" class="preview">
+              <img :src="form.image_url" style="max-width: 200px; margin-top: 8px;" />
+            </div>
+          </div>
           <div class="actions">
-            <button type="submit">儲存</button>
+            <button type="submit" :disabled="loading">
+              {{ loading ? '儲存中...' : '儲存' }}
+            </button>
             <button type="button" @click="closeForm">取消</button>
           </div>
         </form>
@@ -67,76 +93,176 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getProducts, type Product } from '@/api/modules/product'; // 需先實現
+import {  type Product } from '@/api/modules/product';
 import http from '@/api/http';
 
-const products = ref<Product[]>([]);
+// 擴充 Product 類型以包含 deleted_at（若原類型沒有，此處補上）
+interface ProductWithDeleted extends Product {
+  deleted_at?: string | null;
+}
+
+const products = ref<ProductWithDeleted[]>([]);
 const loading = ref(false);
 const showForm = ref(false);
 const editing = ref(false);
-const form = ref<Partial<Product>>({ name: '', price: 0, stock: 0, description: null });
+const showDeleted = ref(false); // ✅ 宣告 showDeleted
 
+const form = ref<Partial<Product>>({
+  name: '',
+  price: 0,
+  stock: 0,
+  description: null,
+  image_url: null,
+});
+
+const imageFile = ref<File | null>(null);
+const imagePreview = ref<string | null>(null);
+
+// 載入商品列表（根據 showDeleted 決定是否包含已刪除）
 const loadProducts = async () => {
   loading.value = true;
   try {
-    const res = await getProducts();
-    if (res.success && Array.isArray(res.data)) {
+    const url = showDeleted.value ? '/products/admin/all' : '/products';
+    const res = await http.get(url);
+    if (res.success) {
       products.value = res.data;
     } else {
       products.value = [];
     }
   } catch (err) {
-    console.error('加載商品失敗', err);
+    console.error('載入商品失敗', err);
     products.value = [];
   } finally {
     loading.value = false;
   }
 };
 
-// 其餘函數類似 ServiceList
-const submitForm = async () => {
+// 軟刪除
+const softDelete = async (id: number) => {
+  if (!confirm('軟刪除商品，客戶仍可在歷史紀錄中看到，前台不再顯示。確定嗎？')) return;
   try {
-    if (editing.value && form.value.id) {
-      await http.put(`/products/${form.value.id}`, form.value);
-    } else {
-      await http.post('/products', form.value);
-    }
-    closeForm();
-    loadProducts();
+    await http.delete(`/products/${id}`);
+    await loadProducts();
   } catch (err) {
-    console.error('儲存失敗', err);
+    console.error('軟刪除失敗', err);
   }
 };
 
-const editProduct = (product: Product) => {
+// 恢復
+const restoreProduct = async (id: number) => {
+  try {
+    await http.post(`/products/${id}/restore`);
+    await loadProducts();
+  } catch (err) {
+    console.error('恢復失敗', err);
+  }
+};
+
+// 永久刪除
+const permanentDelete = async (id: number) => {
+  if (!confirm('永久刪除將一併刪除圖片，且無法恢復。確定嗎？')) return;
+  try {
+    await http.delete(`/products/${id}/permanent`);
+    await loadProducts();
+  } catch (err) {
+    console.error('永久刪除失敗', err);
+  }
+};
+
+// 圖片選擇
+const onFileChange = (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const file = target.files?.[0];
+  console.log('onFileChange 觸發，檔案:', file);
+  if (file) {
+    imageFile.value = file;
+    imagePreview.value = URL.createObjectURL(file);
+  } else {
+    console.log('沒有選擇檔案');
+  }
+};
+
+// 提交表單（新增/編輯）
+const submitForm = async () => {
+  if (loading.value) return;
+  loading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('name', form.value.name || '');
+    formData.append('price', String(form.value.price));
+    formData.append('stock', String(form.value.stock));
+    if (form.value.description) formData.append('description', form.value.description);
+    if (imageFile.value) {
+      formData.append('image', imageFile.value);
+      console.log('附加圖片檔案:', imageFile.value.name);
+    } else {
+      console.log('沒有圖片檔案');
+    }
+
+    let res;
+    if (editing.value && form.value.id) {
+      res = await http.put(`/products/${form.value.id}`, formData);
+    } else {
+      res = await http.post('/products', formData);
+    }
+    if (res.success) {
+      closeForm();
+      loadProducts();
+    } else {
+      console.error('儲存失敗', res.error);
+    }
+  } catch (err) {
+    console.error('儲存失敗', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+// 編輯商品
+const editProduct = (product: ProductWithDeleted) => {
   editing.value = true;
-  form.value = { ...product };
+  form.value = {
+    id: product.id,
+    name: product.name,
+    price: product.price,
+    stock: product.stock,
+    description: product.description ?? null,
+    image_url: product.image_url ?? null,
+  };
+  imagePreview.value = null;
+  imageFile.value = null;
   showForm.value = true;
 };
 
-const deleteProduct = async (id: number) => {
-  if (!confirm('確定刪除此商品嗎？')) return;
-  try {
-    await http.delete(`/products/${id}`);
-    loadProducts();
-  } catch (err) {
-    console.error('刪除失敗', err);
-  }
-};
-
+// 關閉表單
 const closeForm = () => {
   showForm.value = false;
   editing.value = false;
-  form.value = { name: '', price: 0, stock: 0, description: null };
+  form.value = {
+    name: '',
+    price: 0,
+    stock: 0,
+    description: null,
+    image_url: null,
+  };
+  imageFile.value = null;
+  imagePreview.value = null;
+  loading.value = false;
 };
 
-onMounted(() => {
-  loadProducts();
-});
+onMounted(loadProducts);
 </script>
 
 <style scoped>
-/* 复用服务管理的样式，可单独提取公共样式 */
+/* 原有的樣式保持不變，新增以下狀態標籤樣式 */
+.deleted-badge {
+  color: #999;
+  font-style: italic;
+}
+.active-badge {
+  color: #4caf50;
+  font-weight: bold;
+}
 .header {
   display: flex;
   justify-content: space-between;
@@ -186,5 +312,13 @@ button {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+.deleted-badge {
+  color: #999;
+  font-style: italic;
+}
+.active-badge {
+  color: #4caf50;
+  font-weight: bold;
 }
 </style>

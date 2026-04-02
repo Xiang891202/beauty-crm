@@ -31,6 +31,7 @@ export interface Service {
   price: number;
   duration_minutes: number;
   description: string | null;
+  image_url: string | null;
 }
 
 export const getServices = (): Promise<ApiResponse<Service[]>> => {

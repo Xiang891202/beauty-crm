@@ -8,7 +8,7 @@
     <h3>服務包</h3>
     <ul v-if="activeServices.length">
       <li v-for="ms in activeServices" :key="ms.id">
-        {{ ms.service?.name || `服務 #${ms.service_id}` }} - 剩餘 {{ ms.remaining_sessions }} 次
+        <strong>授權 ID：{{ ms.id }}</strong> - {{ ms.service?.name || `服務 #${ms.service_id}` }} - 剩餘 {{ ms.remaining_sessions }} 次
         <button @click="useService(ms.id)">使用服務</button>
       </li>
     </ul>

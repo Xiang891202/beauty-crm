@@ -1,0 +1,32 @@
+﻿// cat > frontend/src/styles/themes/feminine.scss << 'EOF'
+.theme-feminine {
+  --primary: #b28b6f;
+  --primary-dark: #8a5e44;
+  --accent: #d48c5b;
+  --bg: #fff9f5;
+  --surface: #ffffff;
+  --text: #4a3b2f;
+  --text-light: #aa8b74;
+  --border: #f3e7de;
+  --shadow: 0 8px 24px rgba(0,0,0,0.04);
+  --radius: 24px;
+
+  background: var(--bg);
+  color: var(--text);
+  font-family: 'Quicksand', sans-serif;
+
+  // 自定義元件樣式（可在此覆蓋）
+  .hero {
+    background: linear-gradient(135deg, #fdf8f3 0%, #f9e5d6 100%);
+  }
+  .service-card, .product-card {
+    border-radius: 32px;
+    background: white;
+    transition: all 0.3s ease;
+    &:hover {
+      transform: translateY(-6px);
+      box-shadow: 0 20px 30px rgba(0,0,0,0.08);
+    }
+  }
+}
+// EOF

@@ -1,16 +1,54 @@
 import { Router } from 'express';
+import { upload } from '../middleware/upload';
 import { authenticate, roleMiddleware } from '../middleware/auth.middleware';
 import * as serviceController from '../controllers/service.controller';
 
 const router = Router();
 
-// 公开路由（如需公开查询服务列表，可不加中间件）
+// 公開路由
 router.get('/', serviceController.getServices);
 router.get('/:id', serviceController.getServiceById);
 
-// 管理员路由（需要登录且拥有 admin 角色）
-router.post('/', authenticate, roleMiddleware(['admin']), serviceController.createService);
-router.put('/:id', authenticate, roleMiddleware(['admin']), serviceController.updateService);
-router.delete('/:id', authenticate, roleMiddleware(['admin']), serviceController.deleteService);
+// 管理員專用：取得所有服務（含已刪除）
+router.get(
+  '/admin/all',
+  authenticate,
+  roleMiddleware(['admin']),
+  serviceController.getAllServicesAdmin
+);
+
+// 管理員專用：新增、更新、軟刪除、恢復、永久刪除
+router.post(
+  '/',
+  authenticate,
+  roleMiddleware(['admin']),
+  upload.single('image'),
+  serviceController.createService
+);
+router.put(
+  '/:id',
+  authenticate,
+  roleMiddleware(['admin']),
+  upload.single('image'),
+  serviceController.updateService
+);
+router.delete(
+  '/:id',
+  authenticate,
+  roleMiddleware(['admin']),
+  serviceController.deleteService
+);
+router.post(
+  '/:id/restore',
+  authenticate,
+  roleMiddleware(['admin']),
+  serviceController.restoreService
+);
+router.delete(
+  '/:id/permanent',
+  authenticate,
+  roleMiddleware(['admin']),
+  serviceController.hardDeleteService
+);
 
 export default router;

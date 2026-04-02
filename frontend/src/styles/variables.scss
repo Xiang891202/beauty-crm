@@ -1,0 +1,66 @@
+﻿// cat > frontend/src/styles/variables.scss << 'EOF'
+// 顏色系統
+$primary-light: #fdf2e9;
+$primary: #b28b6f;
+$primary-dark: #8a5e44;
+$secondary: #e8c5b0;
+$accent: #d48c5b;
+$success: #88b04b;
+$warning: #f4a261;
+$danger: #e76f51;
+$info: #6c9ebf;
+
+// 中性色（後台）
+$neutral-dark: #2c3e50;
+$neutral-gray: #7f8c8d;
+$neutral-light: #ecf0f1;
+
+// 文字色階
+$text-dark: #2c3e2f;
+$text-body: #4a3b2f;
+$text-light: #aa8b74;
+$text-muted: #8d7a6b;
+
+// 字體
+$font-family-base: 'Quicksand', 'Segoe UI', 'Roboto', sans-serif;
+$font-family-heading: 'Playfair Display', 'Quicksand', serif;
+$font-size-base: 16px;
+$font-size-sm: 0.875rem;
+$font-size-lg: 1.125rem;
+
+// 斷點
+$breakpoints: (
+  'sm': 576px,
+  'md': 768px,
+  'lg': 992px,
+  'xl': 1200px,
+  'xxl': 1400px
+);
+
+// 間距
+$spacer: 1rem;
+$spacers: (
+  0: 0,
+  1: $spacer * 0.25,
+  2: $spacer * 0.5,
+  3: $spacer,
+  4: $spacer * 1.5,
+  5: $spacer * 3
+);
+
+// 陰影
+$shadow-sm: 0 2px 8px rgba(0,0,0,0.04);
+$shadow: 0 8px 20px rgba(0,0,0,0.06);
+$shadow-lg: 0 16px 32px rgba(0,0,0,0.08);
+$shadow-hover: 0 20px 40px rgba(0,0,0,0.12);
+
+// 圓角
+$radius-sm: 8px;
+$radius: 16px;
+$radius-lg: 24px;
+$radius-xl: 32px;
+
+// 過渡
+$transition-base: all 0.2s ease;
+$transition-slow: all 0.3s cubic-bezier(0.2, 0.9, 0.4, 1.1);
+// EOF

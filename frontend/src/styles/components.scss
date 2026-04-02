@@ -1,0 +1,105 @@
+// cat > frontend/src/styles/components.scss << 'EOF'
+@import './variables';
+@import './mixins';
+
+// 按鈕
+.btn {
+  @include button-base;
+  background: var(--primary);
+  color: white;
+  &:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+  }
+  &.btn-outline {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    &:hover {
+      background: rgba($primary, 0.1);
+    }
+  }
+  &.btn-danger {
+    background: $danger;
+    &:hover { background: darken($danger, 10%); }
+  }
+}
+
+// 輸入框
+.input, .textarea {
+  @include input-base;
+}
+
+// 模態框
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+.modal-container {
+  background: var(--surface);
+  border-radius: $radius-lg;
+  width: 500px;
+  max-width: 90%;
+  max-height: 90%;
+  overflow: auto;
+  box-shadow: $shadow-lg;
+}
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem 1.5rem;
+  border-bottom: 1px solid var(--border);
+  h3 {
+    font-size: 1.25rem;
+    font-weight: 600;
+  }
+}
+.modal-body {
+  padding: 1.5rem;
+}
+
+// 表格
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  th, td {
+    padding: 0.75rem 1rem;
+    border-bottom: 1px solid var(--border);
+    text-align: left;
+  }
+  th {
+    background: var(--bg);
+    font-weight: 600;
+  }
+  tr:hover td {
+    background: rgba($primary, 0.05);
+  }
+}
+
+// 分頁
+.pagination {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: center;
+  margin-top: 2rem;
+  button {
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--border);
+    background: var(--surface);
+    border-radius: $radius-sm;
+    cursor: pointer;
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+  }
+}
+// EOF

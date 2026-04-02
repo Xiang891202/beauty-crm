@@ -11,7 +11,7 @@ interface CustomAxiosInstance extends AxiosInstance {
 
 const instance: AxiosInstance = axios.create({
   baseURL: '/api',
-  headers: { 'Content-Type': 'application/json' },
+  // headers: { 'Content-Type': 'application/json' },
 });
 
 // 請求攔截器

@@ -2,13 +2,14 @@
   <div>
     <header>
       <nav>
-        <router-link to="/">首頁</router-link>
-        <router-link to="/services">服務項目</router-link>
-        <router-link to="/products">商品</router-link>
-        <router-link to="/contact">聯絡我們</router-link>
+        <a href="#" @click.prevent="navigateAndScroll('hero')">首頁</a>
+        <a href="#" @click.prevent="navigateAndScroll('services')">服務項目</a>
+        <a href="#" @click.prevent="navigateAndScroll('products')">商品</a>
+        <a href="#" @click.prevent="navigateAndScroll('contact')">聯絡我們</a>
 
         <!-- 根據登入狀態顯示不同內容 -->
         <template v-if="authStore.isLoggedIn && authStore.user?.role === 'customer'">
+
           <router-link to="/my-services">我的療程包</router-link>
           <router-link to="/my-logs">使用記錄</router-link>
           <button @click="handleLogout">登出</button>
@@ -25,18 +26,61 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
-import { useRouter } from 'vue-router';
+import { onMounted, watch } from 'vue';
+import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
 
 const authStore = useAuthStore();
 const router = useRouter();
+const route = useRoute();
 
 onMounted(() => {
   if (authStore.token && !authStore.isLoggedIn) {
     authStore.restoreSession();
   }
+
+  if (route.hash) {
+    const id = route.hash.slice(1);
+    scrollToElement(id);
+  }
 });
+
+// 監聽路由變化，當路由變為根路徑且帶有 hash 時，執行滾動
+watch(
+  () => route.fullPath,
+  (newPath) => {
+    if (newPath === '/' && route.hash) {
+      const id = route.hash.slice(1);
+      scrollToElement(id);
+    }
+  }
+);
+
+// 核心方法：跳轉並滾動
+const navigateAndScroll = (sectionId: string) => {
+  if (route.path !== '/') {
+    // 不在首頁，先跳轉到首頁並帶上 hash
+    router.push({ path: '/', hash: `#${sectionId}` });
+  } else {
+    // 已在首頁，直接滾動
+    scrollToElement(sectionId);
+    // 更新 hash（可選，讓 URL 同步）
+    router.push({ hash: `#${sectionId}` });
+  }
+};
+
+// 滾動到指定元素（輔助函數）
+const scrollToElement = (sectionId: string) => {
+  // 確保元素存在，且頁面已加載完成
+  setTimeout(() => {
+    const element = document.getElementById(sectionId);
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth' });
+    } else {
+      console.warn(`Element with id "${sectionId}" not found.`);
+    }
+  }, 100); // 微延遲等待 DOM 渲染
+};
 
 const handleLogout = () => {
   authStore.logout();

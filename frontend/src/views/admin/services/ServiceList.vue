@@ -2,10 +2,12 @@
   <div>
     <div class="header">
       <h2>服務管理</h2>
+      <label>
+        <input type="checkbox" v-model="showDeleted" @change="loadServices" /> 顯示已刪除
+      </label>
       <button @click="showForm = true">新增服務</button>
     </div>
 
-    <!-- 服务列表表格 -->
     <table class="service-table">
       <thead>
         <tr>
@@ -14,6 +16,7 @@
           <th>價格</th>
           <th>時長(分鐘)</th>
           <th>描述</th>
+          <th>狀態</th>
           <th>操作</th>
         </tr>
       </thead>
@@ -25,12 +28,22 @@
           <td>{{ service.duration_minutes }}</td>
           <td>{{ service.description || '-' }}</td>
           <td>
-            <button @click="editService(service)">編輯</button>
-            <button @click="deleteService(service.id)">刪除</button>
+            <span v-if="service.deleted_at" class="deleted-badge">已刪除</span>
+            <span v-else class="active-badge">正常</span>
+          </td>
+          <td>
+            <template v-if="!service.deleted_at">
+              <button @click="editService(service)">編輯</button>
+              <button @click="softDelete(service.id)">軟刪除</button>
+            </template>
+            <template v-else>
+              <button @click="restoreService(service.id)">恢復</button>
+              <button @click="permanentDelete(service.id)">永久刪除</button>
+            </template>
           </td>
         </tr>
         <tr v-if="services.length === 0">
-          <td colspan="6">暫無服務資料</td>
+          <td colspan="7">暫無服務資料</td>
         </tr>
       </tbody>
     </table>
@@ -46,7 +59,7 @@
           </div>
           <div>
             <label>價格</label>
-            <input v-model.number="form.price" type="number" step="0.01" required />
+            <input v-model.number="form.price" type="number" step="0.01" min="0.01" required />
           </div>
           <div>
             <label>時長(分鐘)</label>
@@ -56,8 +69,20 @@
             <label>描述</label>
             <textarea v-model="form.description"></textarea>
           </div>
+          <div>
+            <label>服務圖片</label>
+            <input type="file" @change="onFileChange" accept="image/*" />
+            <div v-if="imagePreview" class="preview">
+              <img :src="imagePreview" style="max-width: 200px; margin-top: 8px;" />
+            </div>
+            <div v-else-if="form.image_url" class="preview">
+              <img :src="form.image_url" style="max-width: 200px; margin-top: 8px;" />
+            </div>
+          </div>
           <div class="actions">
-            <button type="submit">儲存</button>
+            <button type="submit" :disabled="loading">
+              {{ loading ? '儲存中...' : '儲存' }}
+            </button>
             <button type="button" @click="closeForm">取消</button>
           </div>
         </form>
@@ -68,19 +93,37 @@
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
-import { getServices, type Service } from '@/api/modules/service'; // 需先實現此 API
+import { type Service } from '@/api/modules/service';
 import http from '@/api/http';
 
-const services = ref<Service[]>([]);
+// 擴充 Service 類型以包含 deleted_at
+interface ServiceWithDeleted extends Service {
+  deleted_at?: string | null;
+}
+
+const services = ref<ServiceWithDeleted[]>([]);
 const loading = ref(false);
 const showForm = ref(false);
 const editing = ref(false);
-const form = ref<Partial<Service>>({ name: '', price: 0, duration_minutes: 60, description: null });
+const showDeleted = ref(false);
 
+const form = ref<Partial<Service>>({
+  name: '',
+  price: 0,
+  duration_minutes: 60,
+  description: null,
+  image_url: null,
+});
+
+const imageFile = ref<File | null>(null);
+const imagePreview = ref<string | null>(null);
+
+// 載入服務列表（根據 showDeleted 決定是否包含已刪除）
 const loadServices = async () => {
   loading.value = true;
   try {
-    const res = await getServices();
+    const url = showDeleted.value ? '/services/admin/all' : '/services';
+    const res = await http.get(url);
     if (res.success && Array.isArray(res.data)) {
       services.value = res.data;
     } else {
@@ -94,40 +137,108 @@ const loadServices = async () => {
   }
 };
 
-const submitForm = async () => {
-  try {
-    if (editing.value && form.value.id) {
-      await http.put(`/services/${form.value.id}`, form.value);
-    } else {
-      await http.post('/services', form.value);
-    }
-    closeForm();
-    loadServices();
-  } catch (err) {
-    console.error('儲存失敗', err);
-  }
-};
-
-const editService = (service: Service) => {
-  editing.value = true;
-  form.value = { ...service };
-  showForm.value = true;
-};
-
-const deleteService = async (id: number) => {
-  if (!confirm('確定刪除此服務嗎？')) return;
+// 軟刪除
+const softDelete = async (id: number) => {
+  if (!confirm('軟刪除服務，客戶仍可在歷史紀錄中看到，前台不再顯示。確定嗎？')) return;
   try {
     await http.delete(`/services/${id}`);
-    loadServices();
+    await loadServices();
   } catch (err) {
-    console.error('刪除失敗', err);
+    console.error('軟刪除失敗', err);
   }
+};
+
+// 恢復
+const restoreService = async (id: number) => {
+  try {
+    await http.post(`/services/${id}/restore`);
+    await loadServices();
+  } catch (err) {
+    console.error('恢復失敗', err);
+  }
+};
+
+// 永久刪除
+const permanentDelete = async (id: number) => {
+  if (!confirm('永久刪除將一併刪除圖片，且無法恢復。確定嗎？')) return;
+  try {
+    await http.delete(`/services/${id}/permanent`);
+    await loadServices();
+  } catch (err) {
+    console.error('永久刪除失敗', err);
+  }
+};
+
+const onFileChange = (e: Event) => {
+  const target = e.target as HTMLInputElement;
+  const file = target.files?.[0];
+  if (file) {
+    imageFile.value = file;
+    imagePreview.value = URL.createObjectURL(file);
+  }
+};
+
+const submitForm = async () => {
+  if (loading.value) return;
+  loading.value = true;
+  try {
+    const formData = new FormData();
+    formData.append('name', form.value.name || '');
+    formData.append('price', String(form.value.price));
+    formData.append('duration_minutes', String(form.value.duration_minutes));
+    if (form.value.description) formData.append('description', form.value.description);
+    if (imageFile.value) {
+      formData.append('image', imageFile.value);
+    }
+
+    let res;
+    if (editing.value && form.value.id) {
+      // 不要手動設定 Content-Type
+      res = await http.put(`/services/${form.value.id}`, formData);
+    } else {
+      res = await http.post('/services', formData);
+    }
+    if (res.success) {
+      closeForm();
+      loadServices();
+    } else {
+      console.error('儲存失敗', res.error);
+    }
+  } catch (err) {
+    console.error('儲存失敗', err);
+  } finally {
+    loading.value = false;
+  }
+};
+
+const editService = (service: ServiceWithDeleted) => {
+  editing.value = true;
+  form.value = {
+    id: service.id,
+    name: service.name,
+    price: service.price,
+    duration_minutes: service.duration_minutes,
+    description: service.description ?? null,
+    image_url: service.image_url ?? null,
+  };
+  imagePreview.value = null;
+  imageFile.value = null;
+  showForm.value = true;
 };
 
 const closeForm = () => {
   showForm.value = false;
   editing.value = false;
-  form.value = { name: '', price: 0, duration_minutes: 60, description: null };
+  form.value = {
+    name: '',
+    price: 0,
+    duration_minutes: 60,
+    description: null,
+    image_url: null,
+  };
+  imageFile.value = null;
+  imagePreview.value = null;
+  loading.value = false;
 };
 
 onMounted(loadServices);
@@ -183,5 +294,13 @@ button {
   display: flex;
   justify-content: flex-end;
   gap: 8px;
+}
+.deleted-badge {
+  color: #999;
+  font-style: italic;
+}
+.active-badge {
+  color: #4caf50;
+  font-weight: bold;
 }
 </style>

@@ -12,9 +12,9 @@ const UseService = () => import('@/views/admin/usage/UseService.vue');
 
 // 前台頁面
 const Home = () => import('@/views/public/Home.vue');
-const Services = () => import('@/views/public/Services.vue');
-const Products = () => import('@/views/public/Products.vue');
-const Contact = () => import('@/views/public/Contact.vue');
+// const Services = () => import('@/views/public/Services.vue');
+// const Products = () => import('@/views/public/Products.vue');
+// const Contact = () => import('@/views/public/Contact.vue');
 const CustomerLogin = () => import('@/views/public/CustomerLogin.vue');
 const MyServices = () => import('@/views/public/MyServices.vue');
 const MyServiceLogs = () => import('@/views/public/MyServiceLogs.vue');
@@ -25,9 +25,9 @@ const routes = [
     component: PublicLayout,
     children: [
       { path: '', name: 'Home', component: Home },
-      { path: 'services', name: 'Services', component: Services },
-      { path: 'products', name: 'Products', component: Products },
-      { path: 'contact', name: 'Contact', component: Contact },
+      // { path: 'services', name: 'Services', component: Services },
+      // { path: 'products', name: 'Products', component: Products },
+      // { path: 'contact', name: 'Contact', component: Contact },
       { path: 'customer/login', name: 'CustomerLogin', component: CustomerLogin },
       { 
         path: 'my-services', 
@@ -41,6 +41,9 @@ const routes = [
         component: MyServiceLogs,
         meta: { requiresAuth: true, role: 'customer' }
       },
+      { path: 'services', redirect: '/#services' },
+      { path: 'products', redirect: '/#products' },
+      { path: 'contact', redirect: '/#contact' },
     ],
   },
   {

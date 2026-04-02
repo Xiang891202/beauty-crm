@@ -1,42 +1,45 @@
 import { Service } from '../types';
 import * as serviceRepo from '../repositories/service.repo';
 
-/**
- * 获取所有服务
- */
-export const getServices = async (): Promise<Service[]> => {
+// 取得所有服務（可選擇是否包含已刪除）
+export const getServices = async (includeDeleted = false): Promise<Service[]> => {
+  if (includeDeleted) {
+    return await serviceRepo.findAllIncludeDeleted();
+  }
   return await serviceRepo.findAll();
 };
 
-/**
- * 根据ID获取服务
- */
-export const getServiceById = async (id: number): Promise<Service | null> => {
-  return await serviceRepo.findById(id);
+// 根據 ID 取得服務（可選擇是否包含已刪除）
+export const getServiceById = async (id: number, includeDeleted = false): Promise<Service | null> => {
+  return await serviceRepo.findById(id, includeDeleted);
 };
 
-/**
- * 创建服务
- */
+// 建立服務
 export const createService = async (data: any): Promise<Service> => {
-  // 确保 duration_minutes 有默认值（验证器已提供 default，但这里再加一层保护）
   const newData = {
     ...data,
     duration_minutes: data.duration_minutes ?? 60,
+    image_url: data.image_url ?? null,
   };
   return await serviceRepo.create(newData);
 };
 
-/**
- * 更新服务
- */
+// 更新服務
 export const updateService = async (id: number, data: any): Promise<Service> => {
   return await serviceRepo.update(id, data);
 };
 
-/**
- * 删除服务
- */
-export const deleteService = async (id: number): Promise<void> => {
-  await serviceRepo.remove(id);
+// 軟刪除
+export const deleteService = async (id: number): Promise<boolean> => {
+  return await serviceRepo.softDelete(id);
+};
+
+// 恢復
+export const restoreService = async (id: number): Promise<boolean> => {
+  return await serviceRepo.restore(id);
+};
+
+// 永久刪除
+export const permanentlyDeleteService = async (id: number): Promise<boolean> => {
+  return await serviceRepo.hardDelete(id);
 };
