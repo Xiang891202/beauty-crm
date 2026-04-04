@@ -29,6 +29,10 @@
           @mousemove="draw"
           @mouseup="stopDrawing"
           @mouseleave="stopDrawing"
+          @touchstart="startDrawingTouch"
+          @touchmove="drawTouch"
+          @touchend="stopDrawing"
+          @touchcancel="stopDrawing"
         ></canvas>
         <button type="button" class="btn btn-outline btn-sm" @click="clearCanvas">清除簽名</button>
       </div>
@@ -50,6 +54,7 @@
 import { ref, onMounted } from 'vue';
 import { createUsage } from '@/api/modules/usage';
 import { getMemberServices } from '@/api/modules/member';
+import SignaturePad from '@/components/signature/SignaturePad.vue';
 
 interface MemberService {
   id: number;
@@ -203,6 +208,35 @@ const handleSubmit = async () => {
   } finally {
     loading.value = false;
   }
+};
+
+// 触摸开始
+const startDrawingTouch = (e: TouchEvent) => {
+  e.preventDefault(); // 阻止滚动
+  if (!ctx || !signatureCanvas.value) return;
+  const rect = signatureCanvas.value.getBoundingClientRect();
+  const touch = e.touches[0];
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  ctx.beginPath();
+  ctx.moveTo(x, y);
+  ctx.lineTo(x, y);
+  ctx.stroke();
+  drawing = true;
+};
+
+// 触摸移动
+const drawTouch = (e: TouchEvent) => {
+  e.preventDefault();
+  if (!drawing || !ctx || !signatureCanvas.value) return;
+  const rect = signatureCanvas.value.getBoundingClientRect();
+  const touch = e.touches[0];
+  const x = touch.clientX - rect.left;
+  const y = touch.clientY - rect.top;
+  ctx.lineTo(x, y);
+  ctx.stroke();
+  ctx.beginPath();
+  ctx.moveTo(x, y);
 };
 </script>
 

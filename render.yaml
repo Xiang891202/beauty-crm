@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: beauty-crm-backend-personal
+    runtime: node
+    repo: https://github.com/Xiang891202/beauty-crm   # 👈 替换这里
+    plan: free
+    region: singapore
+    rootDir: backend
+    buildCommand: |
+      npm install
+      npx prisma generate
+      npm run build:personal
+    startCommand: |
+      npx prisma migrate deploy
+      npm run start:personal
+    envVars:
+      - fromGroup: beauty-crm-personal-env
