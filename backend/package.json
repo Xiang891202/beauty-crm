@@ -6,8 +6,8 @@
   "scripts": {
     "dev:personal": "cross-env APP_ENV=personal nodemon --exec ts-node src/server.ts",
     "dev:customer": "cross-env APP_ENV=customer nodemon --exec ts-node src/server.ts",
-    "build:personal": "cross-env APP_ENV=personal tsc",
-    "build:customer": "cross-env APP_ENV=customer tsc",
+    "build:personal": "tsc",
+    "build:customer": "tsc",
     "start:personal": "cross-env APP_ENV=personal node dist/server.js",
     "start:customer": "cross-env APP_ENV=customer node dist/server.js",
     "test": "jest",
