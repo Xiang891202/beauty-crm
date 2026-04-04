@@ -1,5 +1,5 @@
 <template>
-  <div class="products">
+  <div class="products-page">
     <h2>推薦產品</h2>
     <div class="product-grid">
       <div v-for="product in products" :key="product.id" class="product-card">
@@ -42,7 +42,7 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .products {
   padding: 2rem;
 }
@@ -125,4 +125,4 @@ onMounted(async () => {
     flex: 0 0 100%;
   }
 }
-</style>
+</style> -->

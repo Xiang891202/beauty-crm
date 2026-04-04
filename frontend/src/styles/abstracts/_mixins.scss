@@ -1,7 +1,6 @@
-﻿// cat > frontend/src/styles/mixins.scss << 'EOF'
 @import './variables';
 
-// Flex 工具
+// Flex 布局快捷方式
 @mixin flex($direction: row, $justify: flex-start, $align: stretch, $wrap: nowrap) {
   display: flex;
   flex-direction: $direction;
@@ -10,7 +9,7 @@
   flex-wrap: $wrap;
 }
 
-// 響應式斷點
+// 响应式断点
 @mixin respond-to($breakpoint) {
   $value: map-get($breakpoints, $breakpoint);
   @if $value {
@@ -18,11 +17,11 @@
       @content;
     }
   } @else {
-    @warn "未知斷點: #{$breakpoint}";
+    @warn "未知断点: #{$breakpoint}";
   }
 }
 
-// 文字截斷
+// 文字截断（支持多行）
 @mixin text-ellipsis($lines: 1) {
   @if $lines == 1 {
     white-space: nowrap;
@@ -36,23 +35,23 @@
   }
 }
 
-// 卡片懸浮效果
+// 卡片悬停效果
 @mixin card-hover {
   transition: $transition-base;
   &:hover {
     transform: translateY(-4px);
-    box-shadow: $shadow-hover;
+    box-shadow: var(--shadow-hover);
   }
 }
 
-// 按鈕基本樣式
+// 按钮基础样式
 @mixin button-base {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
   padding: 0.75rem 1.5rem;
-  border-radius: $radius;
+  border-radius: var(--radius);
   font-weight: 500;
   transition: $transition-base;
   cursor: pointer;
@@ -63,18 +62,17 @@
   }
 }
 
-// 輸入框基本樣式
+// 输入框基础样式
 @mixin input-base {
   width: 100%;
   padding: 0.75rem 1rem;
   border: 1px solid var(--border);
-  border-radius: $radius-sm;
+  border-radius: var(--radius-sm);
   background: white;
   transition: $transition-base;
   &:focus {
     outline: none;
     border-color: var(--primary);
-    box-shadow: 0 0 0 3px rgba($primary, 0.2);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
   }
 }
-// EOF

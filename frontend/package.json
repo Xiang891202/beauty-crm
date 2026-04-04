@@ -4,9 +4,12 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "vite",
-    "build": "vue-tsc -b && vite build",
-    "preview": "vite preview",
+    "dev:personal": "vite --mode personal",
+    "dev:customer": "vite --mode customer",
+    "build:personal": "vue-tsc -b && vite build --mode personal",
+    "build:customer": "vue-tsc -b && vite build --mode customer",
+    "preview:personal": "vite preview --mode personal",
+    "preview:customer": "vite preview --mode customer",
     "test": "jest",
     "test:watch": "jest --watch"
   },

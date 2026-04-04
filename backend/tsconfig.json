@@ -8,7 +8,7 @@
     "esModuleInterop": true,
     "skipLibCheck": true,
     "forceConsistentCasingInFileNames": true,
-    "baseUrl": ".",
+    // "baseUrl": ".",
     "types": ["node", "jest"],  // ← 添加这一行
     "typeRoots": ["./node_modules/@types", "./src/types"],
     "paths": {

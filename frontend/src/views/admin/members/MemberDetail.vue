@@ -1,15 +1,19 @@
 <template>
-  <div>
+  <div class="member-detail">
     <h2>會員詳細</h2>
-    <p>會員 ID: {{ member.id }}</p>
-    <p>姓名: {{ member.name }}</p>
-    <p>電話: {{ member.phone || '-' }}</p>
+    <div class="info-card">
+      <p>會員 ID: {{ member.id }}</p>
+      <p>姓名: {{ member.name }}</p>
+      <p>電話: {{ member.phone || '-' }}</p>
+    </div>
 
     <h3>服務包</h3>
-    <ul v-if="activeServices.length">
+    <ul class="service-list" v-if="activeServices.length">
       <li v-for="ms in activeServices" :key="ms.id">
-        <strong>授權 ID：{{ ms.id }}</strong> - {{ ms.service?.name || `服務 #${ms.service_id}` }} - 剩餘 {{ ms.remaining_sessions }} 次
-        <button @click="useService(ms.id)">使用服務</button>
+        <div>
+          <strong>授權 ID：{{ ms.id }}</strong> - {{ ms.service?.name || `服務 #${ms.service_id}` }} - 剩餘 {{ ms.remaining_sessions }} 次
+        </div>
+        <button class="btn btn-sm" @click="useService(ms.id)">使用服務</button>
       </li>
     </ul>
     <p v-else>暫無服務包</p>
@@ -19,6 +23,7 @@
       <BaseButton @click="showUseService = true">使用服務</BaseButton>
     </div>
 
+    <!-- 模态框部分保持不变 -->
     <BaseModal v-model="showUseService" title="使用服務">
       <UseService
         :member-id="Number(member.id)"
@@ -103,10 +108,10 @@ onMounted(() => {
 });
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .actions {
   margin-top: 20px;
   display: flex;
   gap: 10px;
 }
-</style>
+</style> -->

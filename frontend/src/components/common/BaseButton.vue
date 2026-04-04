@@ -8,7 +8,7 @@
 defineProps<{ loading?: boolean; outline?: boolean }>();
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .base-button {
   padding: 10px 24px;
   border-radius: 40px;
@@ -36,4 +36,4 @@ defineProps<{ loading?: boolean; outline?: boolean }>();
   opacity: 0.6;
   cursor: not-allowed;
 }
-</style>
+</style> -->

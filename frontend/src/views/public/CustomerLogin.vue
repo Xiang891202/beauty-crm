@@ -40,7 +40,7 @@ const handleLogin = async () => {
 };
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .customer-login {
   display: flex;
   justify-content: center;
@@ -64,4 +64,4 @@ h2 {
   margin-top: 1rem;
   text-align: center;
 }
-</style>
+</style> -->

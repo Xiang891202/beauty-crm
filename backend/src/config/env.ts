@@ -1,5 +1,7 @@
-import dotenv from 'dotenv';
-dotenv.config();
+// import dotenv from 'dotenv';
+// dotenv.config();
+
+//環境入口統一由 service.ts 管理，這裡只提供一個 env 物件，從 process.env 讀取環境變數，並提供默認值
 
 export const env = {
   PORT: process.env.PORT || 3000,

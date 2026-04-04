@@ -1,5 +1,5 @@
 <template>
-  <div>
+  <div class="dashboard">
     <div v-if="stats">
       <div class="stats-cards">
         <div>總會員數：{{ stats!.totalMembers }}</div>
@@ -76,7 +76,7 @@ watch(() => stats.value, () => {
 });
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .stats-cards {
   display: flex;
   gap: 20px;
@@ -95,4 +95,4 @@ watch(() => stats.value, () => {
 .stats-table th {
   background-color: #f2f2f2;
 }
-</style>
+</style> -->

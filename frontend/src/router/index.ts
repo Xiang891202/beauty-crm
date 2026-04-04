@@ -77,8 +77,8 @@ const router = createRouter({
 
 router.beforeEach((to, _from) => {
   const token = localStorage.getItem('token');
-  const userStr = localStorage.getItem('user');
-  const user = userStr ? JSON.parse(userStr) : null;
+  const raw = localStorage.getItem('user');
+  const user = raw && raw !== 'undefined' ? JSON.parse(raw) : null;
 
   // 需要登入但沒有 token
   if (to.meta.requiresAuth && !token) {

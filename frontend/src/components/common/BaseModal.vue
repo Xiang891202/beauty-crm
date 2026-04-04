@@ -19,7 +19,7 @@ const emit = defineEmits(['update:modelValue']);
 const close = () => emit('update:modelValue', false);
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -56,4 +56,4 @@ const close = () => emit('update:modelValue', false);
   font-size: 20px;
   cursor: pointer;
 }
-</style>
+</style> -->

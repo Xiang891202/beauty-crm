@@ -9,9 +9,12 @@ interface CustomAxiosInstance extends AxiosInstance {
   patch<T = any>(url: string, data?: any, config?: AxiosRequestConfig): Promise<T>;
 }
 
+// 後端基礎位址（從環境變數讀取，預設為個人開發環境）
+const BACKEND_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5001';
+
 const instance: AxiosInstance = axios.create({
-  baseURL: '/api',
-  // headers: { 'Content-Type': 'application/json' },
+  baseURL: `${BACKEND_BASE_URL}/api`,   // 完整後端 API 位址
+  timeout: 10000,
 });
 
 // 請求攔截器

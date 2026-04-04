@@ -70,7 +70,7 @@ const formatDate = (date: string) => new Date(date).toLocaleDateString();
 onMounted(fetchServices);
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .my-services {
   max-width: 1200px;
   margin: 0 auto;
@@ -98,4 +98,4 @@ onMounted(fetchServices);
   padding: 3rem;
   color: var(--text-light);
 }
-</style>
+</style> -->

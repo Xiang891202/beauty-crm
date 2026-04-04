@@ -4,7 +4,7 @@
     <div>
       <BaseButton @click="createMember">新增會員</BaseButton>
     </div>
-    <table class="member-table">
+    <table class="data-table">
       <thead>
         <tr>
           <th>ID</th>
@@ -21,7 +21,7 @@
           <td>{{ member.phone }}</td>
           <!-- <td>{{ member.birthday || '-' }}</td> -->
           <td>
-            <router-link :to="`/admin/members/${member.id}`">查看詳情</router-link>
+            <router-link :to="`/admin/members/${member.id}`" class="btn btn-sm">查看詳情</router-link>
           </td>
         </tr>
         <tr v-if="members.length === 0">
@@ -67,8 +67,23 @@ const handleCreate = async (formData: any) => {
     await createMemberApi(formData);
     closeModel();
     await fetchMembers();
-  } catch (err) {
+    // 可选成功提示
+  } catch (err: any) {
     console.error('新增會員失敗', err);
+    // 根据实际错误对象结构提取信息
+    let errorMsg = err.error || err.message || '新增失敗';
+    
+    // 如果是手机号重复，给出友好提示（后端改进后可更精确）
+    if (
+      errorMsg.includes('already exists') ||
+      errorMsg.includes('duplicate') ||
+      errorMsg.includes('phone') ||
+      errorMsg.includes('唯一')
+    ) {
+      errorMsg = '手機號碼已存在，請使用其他號碼';
+    }
+    
+    alert(`新增失敗：${errorMsg}`);
   }
 };
 
@@ -95,7 +110,7 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .member-table {
   width: 100%;
   border-collapse: collapse;
@@ -105,4 +120,4 @@ onMounted(async () => {
   padding: 8px;
   text-align: left;
 }
-</style>
+</style> -->

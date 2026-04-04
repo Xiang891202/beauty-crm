@@ -1,5 +1,5 @@
 <template>
-  <div class="services">
+  <div class="services-page">
     <h2>我們的服務</h2>
     <div class="service-grid">
       <div v-for="service in services" :key="service.id" class="service-card">
@@ -42,7 +42,7 @@ onMounted(async () => {
 });
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .services {
   padding: 2rem;
 }
@@ -126,4 +126,4 @@ onMounted(async () => {
     flex: 0 0 100%;
   }
 }
-</style>
+</style> -->

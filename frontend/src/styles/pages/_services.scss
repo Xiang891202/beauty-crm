@@ -1,0 +1,31 @@
+.services-page,
+.products-page {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 2rem;
+
+  .service-grid,
+  .product-grid {
+    display: grid;
+    gap: 1.5rem;
+    grid-template-columns: repeat(4, 1fr); // 桌面 4 列
+  }
+
+  // 平板：2 列
+  @media (max-width: 1023px) {
+    .service-grid,
+    .product-grid {
+      grid-template-columns: repeat(2, 1fr);
+    }
+  }
+
+  // 手机：1 列
+  @media (max-width: 767px) {
+    padding: 1rem;
+    .service-grid,
+    .product-grid {
+      grid-template-columns: 1fr;
+      gap: 1rem;
+    }
+  }
+}

@@ -1,0 +1,31 @@
+.theme-neutral {
+  --primary: #2c3e50;
+  --primary-dark: #1a252f;
+  --primary-rgb: 44, 62, 80;
+  --accent: #3498db;
+  --accent-rgb: 52, 152, 219;
+  --bg: #f5f7fa;
+  --surface: #ffffff;
+  --text: #2c3e50;
+  --text-light: #7f8c8d;
+  --border: #e2e8f0;
+  --shadow: 0 2px 6px rgba(0,0,0,0.05);
+  --shadow-hover: 0 8px 16px rgba(0,0,0,0.1);
+  --radius: 8px;
+  --radius-sm: 4px;
+   --header-bg: rgba(255, 255, 255, 0.96);
+
+  font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+
+  .btn {
+    border-radius: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+  .data-table th {
+    background: #f8fafc;
+  }
+  .sidebar {
+    border-right: 1px solid var(--border);
+  }
+}

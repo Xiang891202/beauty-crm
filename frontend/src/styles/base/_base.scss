@@ -1,6 +1,4 @@
-// cat > frontend/src/styles/utilities.scss << 'EOF'
-@import './variables';
-@import './mixins';
+@import '../abstracts/mixins';
 
 // 容器
 .container {
@@ -10,21 +8,23 @@
   padding: 0 1rem;
 }
 
-// 網格
+// 通用卡片样式（主题会进一步定制）
+.card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  @include card-hover;
+}
+
+// 栅格（简易）
 .grid {
   display: grid;
   gap: 1.5rem;
   grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
 }
 
-// 文字
-.text-center { text-align: center; }
-.text-right { text-align: right; }
-.text-primary { color: var(--primary); }
-.text-accent { color: var(--accent); }
-.text-muted { color: $text-muted; }
-
-// 間距
+// 工具类（间距、文字、弹性等）
 @each $key, $val in $spacers {
   .mt-#{$key} { margin-top: $val; }
   .mb-#{$key} { margin-bottom: $val; }
@@ -38,7 +38,11 @@
   .m-#{$key} { margin: $val; }
 }
 
-// 彈性佈局
+.text-center { text-align: center; }
+.text-right { text-align: right; }
+.text-primary { color: var(--primary); }
+.text-accent { color: var(--accent); }
+
 .flex { display: flex; }
 .flex-col { flex-direction: column; }
 .items-center { align-items: center; }
@@ -48,13 +52,20 @@
 .gap-3 { gap: 1rem; }
 .gap-4 { gap: 1.5rem; }
 
-// 卡片通用樣式
-.card {
-  background: var(--surface);
-  border-radius: $radius;
-  box-shadow: $shadow;
-  overflow: hidden;
-  transition: $transition-base;
-  @include card-hover;
+// 移动端基础字体微调
+html {
+  font-size: 16px;
+  @include respond-to('sm') {
+    font-size: 14px;
+  }
 }
-// EOF
+
+.container {
+  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0 1rem;
+  @include respond-to('sm') {
+    padding: 0 0.75rem;
+  }
+}

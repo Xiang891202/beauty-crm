@@ -1,0 +1,50 @@
+@import '../abstracts/mixins';
+
+.input,
+.textarea,
+select,
+.base-input .input,
+.base-textarea .textarea {
+  @include input-base;
+}
+
+.textarea,
+.base-textarea .textarea {
+  resize: vertical;
+  min-height: 80px;
+}
+
+label,
+.base-input .label,
+.base-textarea .label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: var(--text);
+}
+
+.form-group,
+.base-input,
+.base-textarea {
+  margin-bottom: 1.25rem;
+}
+
+// 错误状态
+.has-error .input,
+.has-error .textarea {
+  border-color: #f56c6c;
+}
+.error-message {
+  color: #f56c6c;
+  font-size: 0.8rem;
+  margin-top: 0.25rem;
+  display: block;
+}
+
+// 添加到 _forms.scss 末尾
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1.5rem;
+}

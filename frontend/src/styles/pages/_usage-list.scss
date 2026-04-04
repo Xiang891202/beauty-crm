@@ -1,0 +1,52 @@
+.usage-list {
+  h2 {
+    margin-bottom: 1.5rem;
+  }
+
+  .filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    align-items: flex-end;
+
+    .input {
+      width: auto;
+      min-width: 120px;
+      flex: 1 1 auto;
+    }
+
+    .btn {
+      margin-bottom: 0;
+    }
+  }
+
+  .table-wrapper {
+    overflow-x: auto;
+  }
+
+  .pagination {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-top: 1.5rem;
+  }
+
+  .loading, .error {
+    text-align: center;
+    margin-top: 1rem;
+  }
+  .error {
+    color: #d9534f;
+  }
+
+  @media (max-width: 768px) {
+    .filters {
+      flex-direction: column;
+      .input, .btn {
+        width: 100%;
+      }
+    }
+  }
+}

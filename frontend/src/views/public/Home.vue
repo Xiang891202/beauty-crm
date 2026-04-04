@@ -3,7 +3,7 @@
     <section class="hero">
       <h1>綻放你的自信之美</h1>
       <p>專業美容服務，為您量身打造</p>
-      <BaseButton @click="router.push('/services')">探索服務</BaseButton>
+      <!-- <BaseButton @click="router.push('/services')">探索服務</BaseButton> -->
     </section>
 
     <section id="services" class="section-block">
@@ -29,11 +29,11 @@ import Contact from '@/views/public/Contact.vue';
 const router = useRouter();
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .hero {
   text-align: center;
   padding: 4rem 2rem;
   background: linear-gradient(135deg, #fdf8f3 0%, #f9e5d6 100%);
   border-radius: var(--radius);
 }
-</style>
+</style> -->

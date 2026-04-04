@@ -1,19 +1,19 @@
 <template>
-  <div>
+  <div class="usage-list">
     <h2>使用記錄管理</h2>
 
     <!-- 篩選列 -->
     <div class="filters">
-      <input v-model="filters.customer_id" type="number" placeholder="客戶 ID" />
-      <input v-model="filters.service_id" type="number" placeholder="服務 ID" />
-      <input v-model="filters.startDate" type="date" placeholder="開始日期" />
-      <input v-model="filters.endDate" type="date" placeholder="結束日期" />
-      <button @click="fetchLogs">查詢</button>
-      <button @click="resetFilters">重置</button>
+      <input v-model="filters.customer_id" type="number" class="input" placeholder="客戶 ID" />
+      <input v-model="filters.service_id" type="number" class="input" placeholder="服務 ID" />
+      <input v-model="filters.startDate" type="date" class="input" placeholder="開始日期" />
+      <input v-model="filters.endDate" type="date" class="input" placeholder="結束日期" />
+      <button class="btn" @click="fetchLogs">查詢</button>
+      <button class="btn" @click="resetFilters">重置</button>
     </div>
 
     <!-- 表格 -->
-    <table class="log-table">
+    <table class="data-table">
       <thead>
         <tr>
           <th>ID</th>
@@ -48,9 +48,9 @@
 
     <!-- 分頁 -->
     <div class="pagination" v-if="totalPages > 1">
-      <button :disabled="page === 1" @click="page--">上一頁</button>
+      <button class="btn btn-sm" :disabled="page === 1" @click="page--">上一頁</button>
       <span>第 {{ page }} 頁 / 共 {{ totalPages }} 頁</span>
-      <button :disabled="page === totalPages" @click="page++">下一頁</button>
+      <button class="btn btn-sm" :disabled="page === totalPages" @click="page++">下一頁</button>
     </div>
 
     <div v-if="loading" class="loading">載入中...</div>
@@ -120,7 +120,7 @@ watch(page, fetchLogs);
 fetchLogs();
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .filters {
   margin-bottom: 1rem;
 }
@@ -149,4 +149,4 @@ fetchLogs();
 .error {
   color: red;
 }
-</style>
+</style> -->

@@ -45,7 +45,7 @@ const formatDate = (date: string) => new Date(date).toLocaleDateString();
 onMounted(fetchLogs);
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .my-logs {
   max-width: 800px;
   margin: 0 auto;
@@ -73,4 +73,4 @@ onMounted(fetchLogs);
   text-decoration: none;
   font-size: 0.9rem;
 }
-</style>
+</style> -->

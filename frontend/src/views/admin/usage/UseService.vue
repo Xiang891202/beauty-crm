@@ -1,40 +1,50 @@
 <template>
-  <div>
-    <h2>使用服務</h2>
+  <div class="use-service-form">
     <form @submit.prevent="handleSubmit">
-      <div>
+      <!-- 服务方案选择 -->
+      <div class="form-group">
         <label>選擇服務方案</label>
-        <select v-model="selectedMemberServiceId" required>
+        <select v-model="selectedMemberServiceId" class="input" required>
           <option v-for="ms in memberServices" :key="ms.id" :value="ms.id">
             {{ ms.service.name }}（剩餘 {{ ms.remaining_sessions }} 次）
           </option>
         </select>
-        <div>
-          <label>備註</label>
-          <textarea v-model="notes" rows="3" style="width: 100%;"></textarea>
-        </div>
       </div>
-      <div>
+
+      <!-- 备注 -->
+      <div class="form-group">
+        <label>備註</label>
+        <textarea v-model="notes" rows="3" class="textarea" placeholder="可選"></textarea>
+      </div>
+
+      <!-- 签名区域 -->
+      <div class="form-group">
         <label>簽名</label>
         <canvas
           ref="signatureCanvas"
           width="400"
           height="200"
-          style="border:1px solid #ccc; background: white;"
+          class="signature-canvas"
           @mousedown="startDrawing"
           @mousemove="draw"
           @mouseup="stopDrawing"
           @mouseleave="stopDrawing"
         ></canvas>
-        <div>
-          <button type="button" @click="clearCanvas">清除</button>
-        </div>
+        <button type="button" class="btn btn-outline btn-sm" @click="clearCanvas">清除簽名</button>
       </div>
-      <button type="submit" :disabled="loading">送出使用</button>
+
+      <!-- 操作按钮 -->
+      <div class="form-actions">
+        <button type="submit" class="btn" :disabled="loading">送出使用</button>
+        <button type="button" class="btn btn-outline" @click="emit('close')">取消</button>
+      </div>
+
+      <div v-if="message" :class="['message', { error: isError }]">{{ message }}</div>
     </form>
-    <div v-if="message" :class="['message', { error: isError }]">{{ message }}</div>
   </div>
 </template>
+
+
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
@@ -196,6 +206,6 @@ const handleSubmit = async () => {
 };
 </script>
 
-<style scoped>
+<!-- <style scoped>
 /* 样式保持不变 */
-</style>
+</style> -->

@@ -1,0 +1,12 @@
+// px 转 rem（基准 16px）
+@function px2rem($px, $base: 16px) {
+  @return ($px / $base) * 1rem;
+}
+
+// 获取颜色透明度变体（仅演示，可根据需要扩展）
+@function tint($color, $percentage) {
+  @return mix(white, $color, $percentage);
+}
+@function shade($color, $percentage) {
+  @return mix(black, $color, $percentage);
+}

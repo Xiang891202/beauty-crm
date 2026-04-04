@@ -1,31 +1,35 @@
 <template>
-  <div>
-    <h2>購買服務</h2>
+  <div class="purchase-service-form">
     <form @submit.prevent="handleSubmit">
-      <div>
+      <div class="form-group">
         <label>選擇服務</label>
-        <select v-model="form.service_id" required>
+        <select v-model="form.service_id" class="input" required>
           <option v-for="svc in services" :key="svc.id" :value="svc.id">
             {{ svc.name }} - {{ svc.price }} 元
           </option>
         </select>
       </div>
-      <div>
+
+      <div class="form-group">
         <label>購買次數</label>
-        <input v-model.number="form.total_sessions" type="number" min="1" required />
+        <input v-model.number="form.total_sessions" type="number" class="input" min="1" required />
       </div>
-      <div>
+
+      <div class="form-group">
         <label>有效期限（可選）</label>
-        <input v-model="form.expiry_date" type="date" />
+        <input v-model="form.expiry_date" type="date" class="input" />
       </div>
-      <div class="actions">
-        <button type="submit" :disabled="loading">購買</button>
-        <button type="button" @click="emit('close')">取消</button>
+
+      <div class="form-actions">
+        <button type="submit" class="btn" :disabled="loading">購買</button>
+        <button type="button" class="btn btn-outline" @click="emit('close')">取消</button>
       </div>
+
+      <div v-if="message" :class="['message', { error: isError }]">{{ message }}</div>
     </form>
-    <div v-if="message" :class="['message', { error: isError }]">{{ message }}</div>
   </div>
 </template>
+
 
 <script setup lang="ts">
 import { ref, onMounted } from 'vue';
@@ -92,7 +96,7 @@ const handleSubmit = async () => {
 };
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .actions {
   margin-top: 16px;
   display: flex;
@@ -108,4 +112,4 @@ const handleSubmit = async () => {
   background-color: #fee;
   color: #c00;
 }
-</style>
+</style> -->

@@ -38,7 +38,7 @@ const updateValue = (event: Event) => {
 };
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .base-input {
   margin-bottom: 1rem;
 }
@@ -78,4 +78,4 @@ const updateValue = (event: Event) => {
   border-color: var(--primary);
   box-shadow: 0 0 0 3px rgba(232,197,176,0.2);
 }
-</style>
+</style> -->

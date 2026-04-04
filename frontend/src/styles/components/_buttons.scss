@@ -1,0 +1,39 @@
+@import '../abstracts/mixins';
+
+.btn,
+.base-button {
+  @include button-base;
+  background: var(--primary);
+  color: white;
+
+  &:hover:not(:disabled) {
+    background: var(--primary-dark);
+    transform: translateY(-2px);
+  }
+
+  &.btn-outline,
+  &.outline {
+    background: transparent;
+    border: 1px solid var(--primary);
+    color: var(--primary);
+    &:hover {
+      background: rgba(var(--primary-rgb), 0.1);
+      transform: translateY(-2px);
+    }
+  }
+
+  &.btn-danger {
+    background: #e76f51;
+    &:hover { background: darken(#e76f51, 10%); }
+  }
+
+  &.btn-sm {
+    padding: 0.4rem 1rem;
+    font-size: 0.875rem;
+  }
+
+  &.loading {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+}

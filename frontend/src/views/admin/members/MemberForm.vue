@@ -73,7 +73,7 @@ const handleSubmit = () => {
 };
 </script>
 
-<style scoped>
+<!-- <style scoped>
 .password-hint {
   display: block;
   margin-top: -12px;
@@ -87,4 +87,4 @@ const handleSubmit = () => {
   gap: 10px;
   justify-content: flex-end;
 }
-</style>
+</style> -->

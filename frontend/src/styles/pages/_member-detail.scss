@@ -1,0 +1,114 @@
+.member-detail {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 0 2rem;
+
+  h2, h3 {
+    text-align: center;
+    margin-bottom: 1rem;
+  }
+
+  // 基本信息卡片（与服务包列表项样式一致）
+  .info-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 1rem;
+    margin-bottom: 2rem;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+
+    p {
+      margin: 0;
+      text-align: left;
+      flex: 1;
+      min-width: 120px;
+    }
+  }
+
+  .service-list {
+    list-style: none;
+    padding: 0;
+    margin: 1rem 0;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+
+    li {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-sm);
+      padding: 1rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+
+      > div:first-child {
+        flex: 1;
+        min-width: 0;           // 防止文字溢出
+        word-break: break-word;
+      }
+
+      .btn-sm {
+        flex-shrink: 0;
+        width: 100px;           // 所有按钮宽度一致
+        text-align: center;
+      }
+    }
+  }
+
+  .actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    margin-top: 2rem;
+    margin-bottom: 2rem;
+
+    .base-button,
+    button {
+      min-width: 150px;         // 底部两个按钮等宽
+    }
+  }
+
+  // 手机版适配
+  @media (max-width: 768px) {
+    padding: 0 1rem;
+
+    .info-card {
+      flex-direction: column;
+      align-items: stretch;
+      p {
+        text-align: center;
+      }
+    }
+
+    .service-list li {
+      flex-direction: column;
+      align-items: stretch;
+
+      > div:first-child {
+        flex: auto;
+      }
+
+      .btn-sm {
+        width: 100%;
+        margin-left: 0;
+      }
+    }
+
+    .actions {
+      flex-direction: column;
+      gap: 0.75rem;
+      .base-button,
+      button {
+        width: 100%;
+        min-width: auto;
+      }
+    }
+  }
+}

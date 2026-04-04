@@ -1,0 +1,35 @@
+.theme-feminine {
+  // CSS 变量定义
+  --primary: #b28b6f;
+  --primary-dark: #8a5e44;
+  --primary-rgb: 178, 139, 111;
+  --accent: #d48c5b;
+  --accent-rgb: 212, 140, 91;
+  --bg: #fff9f5;
+  --surface: #ffffff;
+  --text: #4a3b2f;
+  --text-light: #aa8b74;
+  --border: #f3e7de;
+  --shadow: 0 8px 24px rgba(0,0,0,0.04);
+  --shadow-hover: 0 20px 30px rgba(0,0,0,0.08);
+  --radius: 24px;
+  --radius-sm: 12px;
+  --header-bg: rgba(255, 255, 240, 0.96);  // 添加这一行
+
+  font-family: 'Quicksand', 'Segoe UI', sans-serif;
+
+  // 组件细节微调
+  .btn {
+    border-radius: 40px;
+    letter-spacing: 1px;
+  }
+  .card {
+    border-radius: 32px;
+  }
+  .hero {
+    background: linear-gradient(135deg, #fdf8f3 0%, #f9e5d6 100%);
+  }
+  .public-header {
+    background: rgba(255, 255, 240, 0.96);
+  }
+}

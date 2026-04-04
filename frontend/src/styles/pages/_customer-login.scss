@@ -1,0 +1,30 @@
+.customer-login {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 80vh;
+  padding: 2rem;
+  
+  .card {
+    max-width: 400px;
+    width: 100%;
+    padding: 2rem;
+  }
+  
+  h2 {
+    font-size: 1.8rem;
+  }
+  
+  @include respond-to('md') {
+    padding: 2rem 1.5rem;
+    h2 { font-size: 1.5rem; }
+    p { font-size: 0.95rem; }
+  }
+  
+  @include respond-to('sm') {
+    padding: 1.5rem 1rem;
+    margin: 1rem auto;
+    h2 { font-size: 1.3rem; }
+    p { font-size: 0.85rem; }
+  }
+}
