@@ -38,8 +38,8 @@ export const create = async (data: Omit<Service, 'id' | 'created_at' | 'updated_
 
 // 更新服務
 export const update = async (id: number, data: Partial<Omit<Service, 'id' | 'created_at' | 'updated_at'>>): Promise<Service> => {
-  const fields = [];
-  const values = [];
+  const fields: string[] = [];
+  const values: any[] = [];   // ← 显式声明为 any[]
   let idx = 1;
   for (const [key, value] of Object.entries(data)) {
     if (value !== undefined) {

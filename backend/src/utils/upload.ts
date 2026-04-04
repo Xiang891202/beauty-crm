@@ -56,8 +56,7 @@ export const deleteImage = async (imageUrl: string, bucket: string = PRODUCTS_BU
   console.log('🗑️ 準備刪除圖片，完整 URL:', imageUrl);
   console.log('使用的 bucket:', bucket);
   
-  // 嘗試多種方式解析路徑
-  let path = null;
+  let path: string | null = null;
   const pattern1 = `/public/${bucket}/`;
   const pattern2 = `/object/public/${bucket}/`;
   
@@ -73,12 +72,14 @@ export const deleteImage = async (imageUrl: string, bucket: string = PRODUCTS_BU
   }
   
   if (path) {
-    const { error } = await supabase.storage.from(bucket).remove([path]);
+    const { error } = await supabase.storage.from(bucket).remove([path]); // path 确保非空
     if (error) {
       console.error('❌ 刪除失敗:', error.message);
     } else {
       console.log('✅ 刪除成功');
     }
+  } else {
+    console.log('⚠️ 無法提取路徑，跳過刪除');
   }
 };
 
