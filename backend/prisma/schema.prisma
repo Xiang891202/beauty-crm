@@ -4,7 +4,8 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+  url      = env("DATABASE_URL") //用於應用程式查詢
+  directUrl = env("DIRECT_URL") //用於執行遷移
 }
 
 model Customer {
