@@ -1,13 +1,19 @@
 <template>
   <form @submit.prevent="handleSubmit">
-    <BaseInput v-model="form.name" label="姓名" required />
-    <BaseInput v-model="form.phone" label="電話" />
+    <BaseInput v-model="form.name" label="姓名" required :error="errors.name" @blur="validateName" />
+    <BaseInput v-model="form.phone" label="電話" required :error="errors.phone" @blur="validatePhone" />
     <!-- <BaseInput v-model="form.email" label="電子郵件" type="email" /> -->
     <BaseInput v-model="form.birthday" label="生日" type="date" />
     <!-- <BaseInput v-model="form.address" label="地址" /> -->
-    <BaseInput v-model="form.password" label="密碼" type="password" :required="!isEdit" />
+    <BaseInput
+      v-model="form.password"
+      label="密碼"
+      type="password"
+      :required="!isEdit"
+      :error="errors.password"
+      @blur="validatePassword"
+    />
     <small v-if="isEdit" class="password-hint">若不修改密碼請留空</small>
-    <BaseTextarea v-model="form.notes" label="備註" />
 
     <div class="form-actions">
       <BaseButton type="submit">儲存</BaseButton>
@@ -19,7 +25,6 @@
 <script setup lang="ts">
 import { reactive, watch } from 'vue';
 import BaseInput from '@/components/common/BaseInput.vue';
-import BaseTextarea from '@/components/common/BaseTextarea.vue';
 import BaseButton from '@/components/common/BaseButton.vue';
 
 const form = reactive({
@@ -28,37 +33,64 @@ const form = reactive({
   email: '',
   birthday: '',
   address: '',
-  notes: '',
-  password: '', // 可選，僅在創建時使用
+  password: '',
+});
+
+const errors = reactive({
+  name: '',
+  phone: '',
+  password: '',
 });
 
 const props = defineProps<{
-  initialData?: {           // 编辑时传入现有数据
+  initialData?: {
     id?: number;
-    name?: string;
-    phone?: string;
-    email?: string;
-    birthday?: string;
-    address?: string;
-    notes?: string;
-    password?: string;
+    name?: string | null;
+    phone?: string | null;
+    email?: string | null;
+    birthday?: string | null;
+    address?: string | null;
   };
 }>();
 
-// 如果是编辑模式，填充初始数据
-watch(() => props.initialData, (data) => {
-  if (data) {
-    form.name = data.name || '';
-    form.phone = data.phone || '';
-    form.email = data.email || '';
-    form.birthday = data.birthday || '';
-    form.address = data.address || '';
-    form.notes = data.notes || '';
-    form.password = '';     // 密码字段留空，不显示原密码
-  }
-}, { immediate: true });
+const isEdit = !!props.initialData?.id;
 
-const isEdit = !!props.initialData;
+const validateName = () => {
+  if (!form.name.trim()) errors.name = '姓名不能為空';
+  else errors.name = '';
+};
+
+const validatePhone = () => {
+  const phoneRegex = /^09\d{8}$/;
+  if (!form.phone) errors.phone = '電話為必填欄位';
+  else if (!phoneRegex.test(form.phone)) errors.phone = '請輸入有效的台灣手機號碼 (09xxxxxxxx)';
+  else errors.phone = '';
+};
+
+const validatePassword = () => {
+  if (!isEdit && !form.password) errors.password = '密碼為必填欄位';
+  else if (form.password && form.password.length < 8) errors.password = '密碼至少需要 8 個字元';
+  else errors.password = '';
+};
+
+// 監聽 initialData 變化，填充表單
+watch(
+  () => props.initialData,
+  (data) => {
+    if (data) {
+      form.name = data.name ?? '';
+      form.phone = data.phone ?? '';
+      form.email = data.email ?? '';
+      form.birthday = data.birthday ?? '';
+      form.address = data.address ?? '';
+      form.password = '';
+      errors.name = '';
+      errors.phone = '';
+      errors.password = '';
+    }
+  },
+  { immediate: true }
+);
 
 const emit = defineEmits<{
   (e: 'submit', data: any): void;
@@ -66,8 +98,12 @@ const emit = defineEmits<{
 }>();
 
 const handleSubmit = () => {
+  validateName();
+  validatePhone();
+  validatePassword();
+  if (errors.name || errors.phone || errors.password) return;
+
   const { password, ...rest } = form;
-  // 编辑模式下，若密码为空，则删除密码字段（后端不更新密码）
   const submitData = isEdit && !password ? rest : { ...rest, password };
   emit('submit', submitData);
 };

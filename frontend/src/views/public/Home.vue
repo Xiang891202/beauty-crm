@@ -6,13 +6,13 @@
       <!-- <BaseButton @click="router.push('/services')">探索服務</BaseButton> -->
     </section>
 
-    <section id="services" class="section-block">
+    <!-- <section id="services" class="section-block">
       <Services />
-    </section>
+    </section> -->
 
-    <section id="products" class="section-block">
+    <!-- <section id="products" class="section-block">
       <Products />
-    </section>
+    </section> -->
 
     <section id="contact" class="section-block">
       <Contact />

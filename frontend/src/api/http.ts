@@ -1,4 +1,5 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
+import router from '@/router'
 
 // 自定義實例類型，將響應數據直接作為返回值（而不是 AxiosResponse）
 interface CustomAxiosInstance extends AxiosInstance {
@@ -27,7 +28,32 @@ instance.interceptors.request.use((config) => {
 // 響應攔截器：直接返回 res.data（解包）
 instance.interceptors.response.use(
   (res: AxiosResponse) => res.data,
-  (err) => Promise.reject(err.response?.data || err.message)
+  (error) => {
+    if (error.response?.status === 401) {
+      const config = error.config;
+      // 登入請求的 401 不自動跳轉
+      const isLoginRequest = config.url && (
+        config.url.includes('/login') || 
+        config.url.includes('/auth/login') ||
+        config.url.includes('/customer/login')
+      );
+      if (isLoginRequest) {
+        return Promise.reject(error.response?.data || error.message);
+      }
+      
+      // 非登入請求：清除憑證
+      localStorage.removeItem('token');
+      localStorage.removeItem('user');
+      
+      // 根據當前頁面路徑決定跳轉到哪個登入頁
+      if (window.location.pathname.startsWith('/admin')) {
+        router.push('/admin/login');
+      } else {
+        router.push('/customer/login');
+      }
+    }
+    return Promise.reject(error.response?.data || error.message);
+  }
 );
 
 // 導出自定義類型的實例

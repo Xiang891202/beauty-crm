@@ -7,10 +7,10 @@
           <span></span><span></span><span></span>
         </button>
         <nav :class="{ open: menuOpen }">
-          <a href="#" @click.prevent="navigateAndScroll('hero')">首頁</a>
-          <a href="#" @click.prevent="navigateAndScroll('services')">服務項目</a>
-          <a href="#" @click.prevent="navigateAndScroll('products')">商品</a>
-          <a href="#" @click.prevent="navigateAndScroll('contact')">聯絡我們</a>
+          <!-- <a href="#" @click.prevent="navigateAndScroll('hero')">首頁</a> -->
+          <!-- <a href="#" @click.prevent="navigateAndScroll('services')">服務項目</a> -->
+          <!-- <a href="#" @click.prevent="navigateAndScroll('products')">商品</a> -->
+          <!-- <a href="#" @click.prevent="navigateAndScroll('contact')">聯絡我們</a> -->
 
           <template v-if="authStore.isLoggedIn && authStore.user?.role === 'customer'">
             <router-link to="/my-services" @click="closeMenu">我的療程包</router-link>
@@ -38,10 +38,13 @@
 import { ref, onMounted, onUnmounted, watch } from 'vue';
 import { useRouter, useRoute } from 'vue-router';
 import { useAuthStore } from '@/stores/auth.store';
+import { useIdleTimeout } from '@/composables/useIdleTimeout';
+import { use } from 'echarts/types/src/extension.js';
 
 const authStore = useAuthStore();
 const router = useRouter();
 const route = useRoute();
+useIdleTimeout();
 
 const menuOpen = ref(false);
 

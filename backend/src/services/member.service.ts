@@ -1,39 +1,46 @@
 import * as memberRepo from '../repositories/member.repo';
 import bcrypt from 'bcrypt';
 
+// 取得所有會員（後台專用，不含 notes/password_hash）
+export const getAllMembersForAdmin = async () => {
+  return await memberRepo.getMembersForAdmin();
+};
+
+// 保留原有 getAllMembers 供其他可能用途（仍返回完整欄位）
 export const getAllMembers = async () => {
-  // 呼叫 memberRepo.getMembers()
   return await memberRepo.getMembers();
 };
 
 export const getMember = async (id: number) => {
-  // 呼叫 memberRepo.getMemberById(id)
   return await memberRepo.getMemberById(id);
 };
 
 export const addMember = async (data: any) => {
-  // 呼叫 memberRepo.createMember(data)
-  //傳入密碼 做 哈希處理
   if (data.password) {
     const saltRounds = 10;
     data.password_hash = await bcrypt.hash(data.password, saltRounds);
-    delete data.password; // 刪除原始密碼字段
+    delete data.password;
   }
   return await memberRepo.createMember(data);
 };
 
 export const modifyMember = async (id: number, data: any) => {
-  // 呼叫 memberRepo.updateMember(id, data)
-  //如果有更新密碼 做 哈希處理
+  // 檢查電話是否已被其他會員使用
+  if (data.phone) {
+    const existing = await memberRepo.getMemberByPhone(data.phone);
+    if (existing && existing.id !== id) {
+      throw new Error('此電話號碼已被其他會員使用');
+    }
+  }
+
   if (data.password) {
     const saltRounds = 10;
     data.password_hash = await bcrypt.hash(data.password, saltRounds);
-    delete data.password; // 刪除原始密碼字段
+    delete data.password;
   }
   return await memberRepo.updateMember(id, data);
 };
 
 export const removeMember = async (id: number) => {
-  // 呼叫 memberRepo.deleteMember(id)
   return await memberRepo.deleteMember(id);
 };

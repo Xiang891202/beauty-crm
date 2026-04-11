@@ -21,11 +21,27 @@ export const getMembers = async (): Promise<Member[]> => {
   return res.rows;
 };
 
+// 1-1. 取得所有客戶（僅後台使用，不返回 notes 與 password_hash）
+export const getMembersForAdmin = async (): Promise<Partial<Member>[]> => {
+  const res = await pool.query(
+    `SELECT id, name, phone, email, birthday, address, created_at, updated_at
+     FROM customers ORDER BY id ASC`
+  );
+  return res.rows;
+};
+
 // 2. 根據 ID 取得單一客戶
 export const getMemberById = async (id: number): Promise<Member | null> => {
   const res = await pool.query('SELECT * FROM customers WHERE id = $1', [id]);
   return res.rows[0] || null;
 };
+
+// 2-1. 根據電話取得客戶（檢查唯一性）
+export const getMemberByPhone = async (phone: string): Promise<Member | null> => {
+  const res = await pool.query('SELECT id, phone FROM customers WHERE phone = $1', [phone]);
+  return res.rows[0] || null;
+};
+
 
 // 3. 新增客戶
 export const createMember = async (

@@ -11,7 +11,13 @@
     "start:personal": "cross-env APP_ENV=personal node dist/server.js",
     "start:customer": "cross-env APP_ENV=customer node dist/server.js",
     "test": "jest",
-    "test:watch": "jest --watchAll"
+    "test:watch": "jest --watchAll",
+
+    "prisma:pull:personal": "dotenv -e .env.personal -- npx prisma db pull",
+    "prisma:pull:customer": "dotenv -e .env.customer -- npx prisma db pull",
+    "prisma:gen": "npx prisma generate",
+    "prisma:studio:personal": "dotenv -e .env.personal -- npx prisma studio",
+    "prisma:studio:customer": "dotenv -e .env.customer -- npx prisma studio"
   },
   "keywords": [],
   "author": "",

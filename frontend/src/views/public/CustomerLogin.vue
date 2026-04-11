@@ -4,7 +4,13 @@
       <h2>🌸 會員登入</h2>
       <form @submit.prevent="handleLogin">
         <BaseInput v-model="phone" label="手機號碼" placeholder="0912345678" />
-        <BaseInput v-model="password" label="密碼" type="password" />
+        <BaseInput 
+          v-model="password" 
+          label="密碼" 
+          type="password" 
+          :error="passwordError"
+          @blur="validatePassword"
+        />
         <BaseButton :loading="loading" block>登入</BaseButton>
         <p v-if="error" class="error">{{ error }}</p>
       </form>
@@ -25,8 +31,20 @@ const phone = ref('');
 const password = ref('');
 const loading = ref(false);
 const error = ref('');
+const passwordError = ref('');
+
+const validatePassword = () => {
+  if (password.value.length > 0 && password.value.length < 8) {
+    passwordError.value = '密碼至少需要 8 個字元';
+  } else {
+    passwordError.value = '';
+  }
+};
 
 const handleLogin = async () => {
+  validatePassword();
+  if (passwordError.value) return;
+  
   loading.value = true;
   error.value = '';
   try {
@@ -41,6 +59,7 @@ const handleLogin = async () => {
 </script>
 
 <!-- <style scoped>
+/* 保持原有樣式 */
 .customer-login {
   display: flex;
   justify-content: center;

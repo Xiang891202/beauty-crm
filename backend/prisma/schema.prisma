@@ -5,7 +5,7 @@ generator client {
 datasource db {
   provider = "postgresql"
   url      = env("DATABASE_URL") //用於應用程式查詢
-  directUrl = env("DIRECT_URL") //用於執行遷移
+  
 }
 
 model Customer {
@@ -13,12 +13,11 @@ model Customer {
   name            String          @db.VarChar(100)
   phone           String?         @unique(map: "idx_customers_phone") @db.VarChar(20)
   email           String?         @db.VarChar(255)
-  birth_date      DateTime?       @db.Date
+  birthday        DateTime?       @db.Date          // 只保留 birthday
   address         String?
-  notes           String?
+  notes           String?                            // 描述欄位（後台隱藏）
   created_at      DateTime?       @default(now()) @db.Timestamp(6)
   updated_at      DateTime?       @default(now()) @db.Timestamp(6)
-  birthday        DateTime?       @db.Date
   password_hash   String?         @db.VarChar(255)
   adjustments     Adjustment[]
   member_services MemberService[]

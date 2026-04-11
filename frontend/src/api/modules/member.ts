@@ -7,7 +7,7 @@ export interface Member {
   name: string;
   phone?: string | null;
   email?: string;
-  birth_date?: string | null;
+  birthday?: string | null;
   address?: string;
   notes?: string;
   created_at?: string;

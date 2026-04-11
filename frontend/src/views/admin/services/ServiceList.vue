@@ -1,12 +1,12 @@
 <template>
   <div>
     <div class="header">
-      <h2>服務管理</h2>
+      <h2>課程品項</h2>
       <label class="checkbox-label">
         <input type="checkbox" v-model="showDeleted" @change="loadServices" />
         顯示已刪除
       </label>
-      <button class="btn" @click="openForm()">新增服務</button>
+      <button class="btn" @click="openForm()">新增課程</button>
     </div>
 
     <div class="table-wrapper">
