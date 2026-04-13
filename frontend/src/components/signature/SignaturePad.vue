@@ -9,6 +9,7 @@
     <div class="signature-actions">
       <BaseButton @click="clear">清除</BaseButton>
       <BaseButton @click="save">確認</BaseButton>
+      <!-- <BaseButton variant="outline" @click="emit('close')">取消</BaseButton> -->
     </div>
   </div>
 </template>
@@ -16,6 +17,7 @@
 <script setup lang="ts">
 import { ref, onMounted } from 'vue'
 import SignaturePad from 'signature_pad'
+import BaseButton from '@/components/common/BaseButton.vue';
 
 const canvas = ref<HTMLCanvasElement | null>(null)
 let pad: SignaturePad | null = null
@@ -66,15 +68,22 @@ onMounted(() => {
 
 const clear = () => pad?.clear()
 const save = () => {
+  console.log('save 被調用, pad:', pad, 'isEmpty:', pad?.isEmpty());
   if (pad && !pad.isEmpty()) {
-    const signatureData = pad.toDataURL()
-    emit('save', signatureData)
+    const signatureData = pad.toDataURL();
+    console.log('簽名資料長度:', signatureData.length);
+    emit('save', signatureData);
   } else {
-    alert('請先簽名')
+    alert('請先簽名');
   }
-}
+};
 
 const emit = defineEmits<{ (e: 'save', data: string): void }>()
+// const close = () => emit('close');
+// const emit = defineEmits<{
+//   (e: 'success'): void;
+//   (e: 'close'): void;
+// }>();
 </script>
 
 <style scoped>

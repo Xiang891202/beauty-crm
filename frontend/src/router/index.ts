@@ -66,6 +66,11 @@ const routes = [
       { path: 'products', name: 'ProductList', component: () => import('@/views/admin/products/ProductList.vue') },
       { path: 'services', name: 'ServiceList', component: () => import('@/views/admin/services/ServiceList.vue') },
       { path: 'adjustments', name: 'AdjustmentList', component: () => import('@/views/admin/adjustments/AdjustmentList.vue') },
+      // { path: 'purchase-package', name: 'PurchasePackage', component: () => import('@/views/admin/members/PurchasePackage.vue') },
+      { path: 'service-packages', component: () => import('@/views/admin/services/ServicePackageList.vue') },
+      { path: 'service-packages/form/:id', component: () => import('@/views/admin/services/ServicePackageForm.vue') },
+      { path: 'member-packages/purchase', name: 'MemberPackagePurchase', component: () => import('@/views/admin/member-packages/PurchasePackage.vue') },
+      { path: 'gifts', component: () => import('@/views/admin/gifts/GiftList.vue') },
     ],
   },
 ];

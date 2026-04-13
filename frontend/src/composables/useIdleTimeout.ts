@@ -2,7 +2,7 @@ import { ref, onMounted, onUnmounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { ElMessageBox } from 'element-plus';
 
-const IDLE_TIMEOUT = 30 * 60 * 1000; // 30 分鐘無操作觸發提示
+const IDLE_TIMEOUT = 10 * 60 * 1000; // 10 分鐘無操作觸發提示
 const LOGOUT_COUNTDOWN = 10; // 倒數 10 秒
 
 export function useIdleTimeout() {
