@@ -35,5 +35,10 @@ export const createPackage = (data: Omit<ServicePackage, 'id' | 'created_at' | '
 export const updatePackage = (id: string, data: Partial<Omit<ServicePackage, 'id' | 'created_at' | 'updated_at'>>): Promise<ApiResponse<ServicePackage>> =>
   http.put(`/service-packages/packages/${id}`, data);
 
+// ... 其他导入与接口 ...
+
+export const restorePackage = (id: string): Promise<ApiResponse<void>> =>
+  http.post(`/service-packages/packages/${id}/restore`);
+
 export const deletePackage = (id: string): Promise<ApiResponse<void>> =>
   http.delete(`/service-packages/packages/${id}`);

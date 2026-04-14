@@ -23,12 +23,21 @@ export interface MemberPackage {
   total_uses: number;
   remaining_uses: number;
   status: 'active' | 'expired' | 'used_up';
-  package: {                     // 關聯的組合包模板（含品項清單）
-    id: string;
-    name: string;
-    description: string;
-    items: PackageItem[];
-  };
+  snapshot_items?: Array<{   // 新增快照品項
+    service_id: number;
+    original_quantity: number;
+    service?: {
+      id: number;
+      name: string;
+    };
+  }>;
+//   package: {                     // 關聯的組合包模板（含品項清單）
+//     id: string;
+//     name: string;
+//     description: string;
+//     items: PackageItem[];
+//   };
+    package?:any; // 先放寬型別，實際使用時只取 snapshot_items，避免混淆
 }
 
 // 為客戶購買組合包

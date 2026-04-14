@@ -62,21 +62,21 @@ export const getUsage = async (req: Request, res: Response) => {
   }
 };
 
+// backend/src/controllers/service_log.controller.ts
 export const listUsages = async (req: Request, res: Response) => {
   try {
-    const { customer_id, service_id, startDate, endDate, page, limit } = req.query;
-    const result = await usageService.list({
+    const { customer_id, customer_name, startDate, endDate, page, limit } = req.query;
+    const result = await usageService.getUnifiedList({
       customer_id: customer_id ? Number(customer_id) : undefined,
-      service_id: service_id ? Number(service_id) : undefined,
+      customer_name: customer_name as string,   // 新增
       startDate: startDate ? new Date(startDate as string) : undefined,
       endDate: endDate ? new Date(endDate as string) : undefined,
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
     });
     res.json(successResponse(result));
   } catch (error: any) {
-    const status = error.status || 400;
-    res.status(status).json(errorResponse(error.message, status));
+    res.status(500).json(errorResponse(error.message, 500));
   }
 };
 

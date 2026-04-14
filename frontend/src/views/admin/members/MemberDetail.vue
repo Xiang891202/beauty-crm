@@ -22,19 +22,21 @@
     <!-- 組合包區塊 -->
     <h3 class="text-xl font-semibold mt-6 mb-3">組合包</h3>
     <div v-if="memberPackages.length" class="space-y-4">
-      <div v-for="pkg in memberPackages" :key="pkg.id" class="border p-3 rounded">
-        <div class="flex justify-between items-start">
+      <div v-for="pkg in memberPackages" :key="pkg.id">
+        <div class="flex justify-between items-start service-list space-y-2">
           <div>
             <strong>{{ pkg.snapshot_name }}</strong>
             <p class="text-sm text-gray-600">{{ pkg.snapshot_description }}</p>
-            <p class="text-sm">剩餘總次數：{{ pkg.remaining_uses }} / {{ pkg.total_uses }}</p>
+            <p class="text-sm">剩餘總次數：{{ pkg.remaining_uses }} 
+              <!-- / {{ pkg.total_uses }} -->
+            </p>
             <!-- <p class="text-sm" v-if="pkg.expiry_date">有效期限：{{ formatDate(pkg.expiry_date) }}</p> -->
             <div class="mt-2">
               <p class="text-sm font-medium">包含服務項目：</p>
               <ul class="list-disc list-inside text-sm">
-                <li v-for="item in pkg.package?.items" :key="item.service_id">
+                <li v-for="item in pkg.snapshot_items" :key="item.service_id">
                   {{ item.service?.name || `服務 #${item.service_id}` }}
-                  <!-- （此組合包內含 {{ item.quantity }} 次） -->
+                  <!-- （此組合包內含 {{ item.original_quantity }} 次） -->
                 </li>
               </ul>
             </div>

@@ -3,6 +3,7 @@ import prisma from '../config/prisma';
 import { Prisma } from '@prisma/client';
 import { AdjustmentRepository } from '../repositories/adjustment.repo';
 import { Adjustment } from '../types';
+import { supabase } from '../lib/supabase';
 
 export class AdjustmentService {
   private repo: AdjustmentRepository;
@@ -68,22 +69,40 @@ export class AdjustmentService {
     return adj;
   }
 
-  async list(filter: {
-  usageId?: number;
-  productId?: number;
-  type?: 'INCREASE' | 'DECREASE';
-  startDate?: Date;
-  endDate?: Date;
-  page?: number;
-  limit?: number;
-  }): Promise<{ items: Adjustment[]; total: number }> {
-    return this.repo.findAll({
-      member_service_id: filter.usageId,   // 映射
-      adjustment_type: filter.type,
-      startDate: filter.startDate,
-      endDate: filter.endDate,
-      page: filter.page,
-      limit: filter.limit,
-    });
+  async list(params: {
+    member_service_id?: number;
+    member_package_id?: string;
+    adjustment_type?: 'INCREASE' | 'DECREASE';
+    endDate?: Date;
+    page: number;
+    limit: number;
+  }) {
+    const { member_service_id, member_package_id, adjustment_type, endDate, page, limit } = params;
+    const offset = (page - 1) * limit;
+
+    let query = supabase
+      .from('adjustments')
+      .select(`
+        *,
+        customer:customers ( name )
+      `, { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (member_service_id) query = query.eq('member_service_id', member_service_id);
+    if (member_package_id) query = query.eq('member_package_id', member_package_id);
+    if (adjustment_type) query = query.eq('adjustment_type', adjustment_type);
+    if (endDate) query = query.lte('created_at', endDate.toISOString());
+
+    // 預設不篩選 member_service_id 或 member_package_id，讓兩者都出現
+    const { data, error, count } = await query;
+    if (error) throw new Error(error.message);
+
+    return {
+      items: data || [],
+      total: count || 0,
+      page,
+      limit,
+    };
   }
 }

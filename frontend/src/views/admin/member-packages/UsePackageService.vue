@@ -17,10 +17,10 @@
         <!-- 所選組合包的品項（可多選） -->
         <div v-if="selectedPackage">
           <label class="block text-sm font-medium mb-2">選擇本次使用的服務項目（可複選）</label>
-          <div v-for="item in selectedPackage.package.items" :key="item.service_id" class="flex items-center gap-2 mb-1">
+          <div v-for="item in selectedPackage.snapshot_items" :key="item.service_id" class="flex items-center gap-2 mb-1">
             <input type="checkbox" v-model="selectedServiceIds" :value="item.service_id" />
             <span>{{ item.service?.name || `服務 #${item.service_id}` }}</span>
-            <!-- <span class="text-xs text-gray-500">（此組合包內含 {{ item.quantity }} 次）</span> -->
+            <!-- <span class="text-xs text-gray-500">（此組合包內含 {{ item.original_quantity }} 次）</span> -->
           </div>
         </div>
         
@@ -34,6 +34,11 @@
             </div>
             <BaseButton type="button" variant="outline" size="sm" @click="addGift">+ 新增贈品</BaseButton>
         </div>
+        
+        <div>
+          <label class="block text-sm font-medium mb-1">備註</label>
+          <textarea v-model="form.notes" class="w-full border rounded p-2" rows="2"></textarea>
+        </div>
 
         <div>
           <label class="block text-sm font-medium mb-1">簽名（必填）</label>
@@ -41,10 +46,6 @@
           <BaseButton variant="outline" @click="$emit('close')">取消</BaseButton>
         </div>
         
-        <div>
-          <label class="block text-sm font-medium mb-1">備註</label>
-          <textarea v-model="form.notes" class="w-full border rounded p-2" rows="2"></textarea>
-        </div>
 
         <div class="flex justify-end gap-3 pt-4">
           <!-- <BaseButton type="submit" :loading="loading">確認使用</BaseButton> -->

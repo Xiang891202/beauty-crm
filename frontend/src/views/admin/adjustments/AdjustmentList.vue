@@ -22,8 +22,7 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>ID</th>
-            <th>服務授權 ID</th>
+            <th>補償對象</th>
             <th>類型</th>
             <th>數量</th>
             <th>原因</th>
@@ -32,18 +31,20 @@
           </tr>
         </thead>
         <tbody>
-          <!-- 使用 adjustments.items 遍歷 -->
           <tr v-for="adj in adjustments.items" :key="adj.id">
-            <td>{{ adj.id }}</td>
-            <td>{{ adj.member_service_id }}</td>
+            <td>
+              <div v-if="adj.customer">{{ adj.customer.name }}</div>
+              <div v-else>客戶 {{ adj.customer_id }}</div>
+              <div class="text-sm text-gray-500">
+                <span v-if="adj.member_package_id">組合包：{{ adj.package_snapshot_name || adj.member_package_id }}</span>
+                <span v-else>傳統服務包 ID：{{ adj.member_service_id }}</span>
+              </div>
+            </td>
             <td>{{ adj.adjustment_type === 'INCREASE' ? '增加' : '減少' }}</td>
             <td>{{ adj.amount }}</td>
             <td>{{ adj.reason || '-' }}</td>
             <td>{{ adj.created_by }}</td>
             <td>{{ formatDate(adj.created_at) }}</td>
-          </tr>
-          <tr v-if="adjustments.items.length === 0">
-            <td colspan="7">暫無調整記錄</td>
           </tr>
         </tbody>
       </table>
@@ -98,6 +99,24 @@ import { ref, onMounted, watch } from 'vue';
 import { getAdjustments, createAdjustment, type Adjustment } from '@/api/modules/adjustment';
 
 // 數據結構修正：使用包含 items 和 total 的對象
+// 定義篩選條件的型別
+interface Filters {
+  member_service_id: string;
+  member_package_id: string;
+  adjustment_type: string;
+  startDate: string;
+  endDate: string;
+}
+
+// 定義表單資料的型別
+interface AdjustForm {
+  member_service_id: number | null;
+  member_package_id: string | null;
+  adjustment_type: 'INCREASE' | 'DECREASE';
+  amount: number;
+  reason: string;
+}
+
 const adjustments = ref<{ items: Adjustment[]; total: number }>({
   items: [],
   total: 0
@@ -107,25 +126,36 @@ const page = ref(1);
 const limit = 20;
 const totalPages = ref(1);
 
-const filters = ref({
+// ✅ 明確指定型別，避免推斷錯誤
+const filters = ref<Filters>({
   member_service_id: '',
+  member_package_id: '',
   adjustment_type: '',
   startDate: '',
   endDate: '',
 });
 
 const showForm = ref(false);
-const adjustForm = ref({
-  member_service_id: null as number | null,
-  adjustment_type: 'INCREASE' as 'INCREASE' | 'DECREASE',
+const adjustForm = ref<AdjustForm>({
+  member_service_id: null,
+  member_package_id: null,
+  adjustment_type: 'INCREASE',
   amount: 1,
   reason: '',
 });
+// const adjustForm = ref({
+//   member_service_id: null as number | null,
+//   member_package_id: null as string | null,
+//   adjustment_type: 'INCREASE' as 'INCREASE' | 'DECREASE',
+//   amount: 1,
+//   reason: '',
+// });
 
 const loadAdjustments = async () => {
   try {
     const params: any = { page: page.value, limit };
     if (filters.value.member_service_id) params.member_service_id = filters.value.member_service_id;
+    if (filters.value.member_package_id) params.member_package_id = filters.value.member_package_id; // ✅ 新增
     if (filters.value.adjustment_type) params.adjustment_type = filters.value.adjustment_type;
     if (filters.value.startDate) params.startDate = filters.value.startDate;
     if (filters.value.endDate) params.endDate = filters.value.endDate;
@@ -168,14 +198,14 @@ const submitAdjustment = async () => {
 };
 
 const resetFilters = () => {
-  filters.value = { member_service_id: '', adjustment_type: '', startDate: '', endDate: '' };
+  filters.value = { member_service_id: '', member_package_id: '', adjustment_type: '', startDate: '', endDate: '' };
   page.value = 1;
   loadAdjustments();
 };
 
 const closeForm = () => {
   showForm.value = false;
-  adjustForm.value = { member_service_id: null, adjustment_type: 'INCREASE', amount: 1, reason: '' };
+  adjustForm.value = { member_service_id: null, member_package_id: null, adjustment_type: 'INCREASE', amount: 1, reason: '' };
 };
 
 const formatDate = (dateStr: string) => {

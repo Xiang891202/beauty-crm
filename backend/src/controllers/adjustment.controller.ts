@@ -37,22 +37,18 @@ export const getAdjustment = async (req: Request, res: Response) => {
 
 export const listAdjustments = async (req: Request, res: Response) => {
   try {
-    const { usageId, productId, type, startDate, endDate, page, limit } = req.query;
+    const { member_service_id, member_package_id, adjustment_type, endDate, page, limit } = req.query;
     const result = await adjustmentService.list({
-      usageId: usageId ? Number(usageId) : undefined,
-      productId: productId ? Number(productId) : undefined,
-      type: type as any,
-      startDate: startDate ? new Date(startDate as string) : undefined,
+      member_service_id: member_service_id ? Number(member_service_id) : undefined,
+      member_package_id: member_package_id as string,
+      adjustment_type: adjustment_type as any,
       endDate: endDate ? new Date(endDate as string) : undefined,
-      page: page ? Number(page) : undefined,
-      limit: limit ? Number(limit) : undefined,
+      page: page ? Number(page) : 1,
+      limit: limit ? Number(limit) : 20,
     });
-    // successResponse(res, 200, 'Adjustment list retrieved', result);
     res.json(successResponse(result));
   } catch (error: any) {
-    const status = error.status || 400;
-    // errorResponse(res, 400, error.message);
-    res.status(status).json(errorResponse(error.message, status));
+    res.status(500).json(errorResponse(error.message, 500));
   }
 };
 

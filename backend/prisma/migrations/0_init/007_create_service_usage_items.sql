@@ -1,9 +1,4 @@
--- =====================================================
--- 建立使用品項關聯表（多對多）
--- 記錄每次使用所選的服務項目
--- 日期: 2026-04-13
--- =====================================================
-
+-- 使用品項關聯表（記錄每次使用所選的服務項目）
 CREATE TABLE IF NOT EXISTS service_usage_items (
     id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
     usage_log_id UUID NOT NULL REFERENCES service_usage_logs(id) ON DELETE CASCADE,
