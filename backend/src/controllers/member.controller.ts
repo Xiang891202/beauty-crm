@@ -22,9 +22,9 @@ export const getMember = async (req: Request, res: Response) => {
     if (!member) {
       return res.status(404).json(errorResponse('Member not found', 404));
     }
-    // 移除密碼欄位
-    delete member.password_hash;
-    res.json(successResponse(member));
+    // 排除密碼欄位
+    const { password_hash, ...memberWithoutPassword } = member;
+    res.json(successResponse(memberWithoutPassword));
   } catch (err) {
     console.error('Error in getMember:', err);
     res.status(500).json(errorResponse('Failed to fetch member', 500));
