@@ -35,12 +35,14 @@ const router = useRouter();
 const route = useRoute();
 const menuOpen = ref(false);
 useIdleTimeout();
+console.log('useIdleTimeout initialized');
 
 const toggleMenu = () => { menuOpen.value = !menuOpen.value; };
 const closeMenu = () => { menuOpen.value = false; };
 
 const handleLogout = () => {
   localStorage.removeItem('token');
+  localStorage.removeItem('user');
   router.push('/admin/login');
 };
 

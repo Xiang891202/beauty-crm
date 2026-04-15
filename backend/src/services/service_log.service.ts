@@ -125,47 +125,58 @@ export class ServiceLogService {
       raw: log,
     }));
 
-    // 2. 查詢組合包使用紀錄 (Supabase)
-    let packageQuery = supabase
-      .from('service_usage_logs')
-      .select(`
-        id,
-        created_at,
-        usage_date,
-        notes,
-        signature_url,
-        snapshot_package_name,
-        selected_service_ids,
-        customer_id,
-        customer:customers(name),
-        member_service_packages ( snapshot_name ),
-        items:service_usage_items ( service_id, service:services(id, name) )
-      `, { count: 'exact' })
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+    // 2. 查詢組合包使用紀錄 (Supabase) - 先不關聯贈品
+  let packageQuery = supabase
+    .from('service_usage_logs')
+    .select(`
+      id,
+      created_at,
+      usage_date,
+      notes,
+      signature_url,
+      snapshot_package_name,
+      selected_service_ids,
+      customer_id,
+      customer:customers(name),
+      member_service_packages ( snapshot_name ),
+      items:service_usage_items ( service_id, service:services(id, name) )
+    `, { count: 'exact' })
+    .order('created_at', { ascending: false })
+    .range(offset, offset + limit - 1);
 
-    if (customer_id) packageQuery = packageQuery.eq('customer_id', customer_id);
-    if (startDate) packageQuery = packageQuery.gte('usage_date', startDate.toISOString());
-    if (endDate) packageQuery = packageQuery.lte('usage_date', endDate.toISOString());
+  if (customer_id) packageQuery = packageQuery.eq('customer_id', customer_id);
+  if (startDate) packageQuery = packageQuery.gte('usage_date', startDate.toISOString());
+  if (endDate) packageQuery = packageQuery.lte('usage_date', endDate.toISOString());
 
-    const { data: packageLogs, error: pkgError, count: packageCount } = await packageQuery;
-    if (pkgError) throw new Error(pkgError.message);
+  const { data: packageLogs, error: pkgError, count: packageCount } = await packageQuery;
+  if (pkgError) throw new Error(pkgError.message);
 
-    const packageItems = (packageLogs || []).map(log => {
+  // 手動為每個組合包紀錄查詢贈品
+  const packageItems = await Promise.all((packageLogs || []).map(async (log: any) => {
+    // 查詢該使用紀錄關聯的贈品
+    const { data: gifts } = await supabase
+      .from('package_gifts')
+      .select('gift_description, notes')
+      .eq('service_usage_log_id', log.id);
+    
     const serviceNames = (log.items || []).map((item: any) => item.service?.name || `服務 #${item.service_id}`).join('、');
     const snapshotName = log.snapshot_package_name || (log.member_service_packages?.[0] as any)?.snapshot_name || '組合包';
+    const giftDescriptions = (gifts || []).map((gift: any) => gift.gift_description).join('、');
+    const giftNote = giftDescriptions ? `；贈送禮品：${giftDescriptions}` : '';
+    
     return {
       id: `pkg_${log.id}`,
       type: 'package',
-      occurred_at: log.usage_date || log.created_at,
-      customer_name: (log.customer as any)?.name || `客戶 #${log.customer_id}`, // ✅ 新增
+      occurred_at: log.created_at || log.usage_date,
+      customer_name: (log.customer as any)?.name || `客戶 #${log.customer_id}`,
       title: `組合包使用：${snapshotName}`,
-      description: `使用項目：${serviceNames || '未選擇項目'}`,
+      description: `使用項目：${serviceNames || '未選擇項目'}${giftNote}`,
       notes: log.notes,
       signature_url: log.signature_url,
       raw: log,
+      gifts: gifts || [],
     };
-  });
+  }));
 
     // 3. 查詢贈品兌換紀錄 (package_gifts)
     let giftQuery = supabase
@@ -180,6 +191,7 @@ export class ServiceLogService {
         member_service_packages ( customer_id, snapshot_name, customer:customers(name) )
       `, { count: 'exact' })
       .eq('is_redeemed', true)
+      .is('service_usage_log_id', null)   // ✅ 只查未關聯的贈品
       .order('redeemed_at', { ascending: false })
       .range(offset, offset + limit - 1);
 

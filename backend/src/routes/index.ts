@@ -10,10 +10,12 @@ import publicRoutes from './public.routes';                     // 客戶登入 
 import { restorePackage } from '../controllers/service-package.controller'; // 還原組合包
 import serviceLogRoutes from './service_log.routes';
 import adjustmentRoutes from './adjustment.routes';
+import statsRoutes from './stats.routes';
 
 const router = Router();
 
 router.use('/auth', authRoutes);
+router.use('/admin', statsRoutes);
 router.use('/products', productRoutes);
 router.use('/members', memberRoutes);
 router.use('/services', serviceRoutes);

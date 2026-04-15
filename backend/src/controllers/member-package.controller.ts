@@ -2,6 +2,9 @@ import { Request, Response } from 'express';
 import * as memberPackageService from '../services/member-package.service';
 import { successResponse, errorResponse } from '../utils/response';
 
+import { ServiceLogService } from '../services/service_log.service';
+const serviceLogService = new ServiceLogService();
+
 const getParamId = (param: string | string[]): string => {
   return Array.isArray(param) ? param[0] : param;
 };
@@ -111,19 +114,21 @@ export const getUsageLogs = async (req: Request, res: Response) => {
   }
 };
 
-// 客戶查詢自己的使用紀錄
+// 客戶查詢自己的使用紀錄（含傳統服務 + 組合包 + 贈品）
 export const getMyUsageLogs = async (req: Request, res: Response) => {
   try {
     const customer_id = (req as any).user?.id;
     if (!customer_id) {
       return res.status(401).json(errorResponse('未授權', 401));
     }
-    const { member_package_id } = req.query;
-    const logs = await memberPackageService.getUsageLogs({
+    // 使用統一的 getUnifiedList，只查該客戶的紀錄（不分頁，一次取較多筆）
+    const result = await serviceLogService.getUnifiedList({
       customer_id,
-      member_package_id: member_package_id as string,
+      page: 1,
+      limit: 100,
     });
-    res.json(successResponse(logs));
+    // 直接回傳 items 陣列（不帶分頁結構）
+    res.json(successResponse(result.items || []));
   } catch (err: any) {
     console.error(err);
     res.status(500).json(errorResponse(err.message || '查詢失敗', 500));

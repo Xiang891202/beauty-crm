@@ -70,6 +70,7 @@ export class AdjustmentService {
   }
 
   async list(params: {
+    customer_name?: string; // ✅ 新增
     member_service_id?: number;
     member_package_id?: string;
     adjustment_type?: 'INCREASE' | 'DECREASE';
@@ -77,7 +78,7 @@ export class AdjustmentService {
     page: number;
     limit: number;
   }) {
-    const { member_service_id, member_package_id, adjustment_type, endDate, page, limit } = params;
+    const { customer_name, member_service_id, member_package_id, adjustment_type, endDate, page, limit } = params;
     const offset = (page - 1) * limit;
 
     let query = supabase

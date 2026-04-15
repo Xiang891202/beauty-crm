@@ -13,16 +13,14 @@
       <table class="data-table">
         <thead>
           <tr>
-            <th>ID</th><th>名稱</th><th>價格</th><th>時長(分鐘)</th><th>描述</th><th>狀態</th><th>操作</th>
+            <th>名稱</th>
+            <th>狀態</th>
+            <th>操作</th>
           </tr>
         </thead>
         <tbody>
           <tr v-for="service in services" :key="service.id">
-            <td>{{ service.id }}</td>
             <td>{{ service.name }}</td>
-            <td>{{ service.price }}</td>
-            <td>{{ service.duration_minutes }}</td>
-            <td>{{ service.description || '-' }}</td>
             <td>
               <span v-if="service.deleted_at" class="deleted-badge">已刪除</span>
               <span v-else class="active-badge">正常</span>
@@ -38,31 +36,33 @@
               </template>
             </td>
           </tr>
-          <tr v-if="services.length === 0"><td colspan="7">暫無服務資料</td></tr>
+          <tr v-if="services.length === 0">
+            <td colspan="3">暫無服務資料</td>
+          </tr>
         </tbody>
       </table>
     </div>
 
-    <!-- 新增/編輯模態框 -->
+    <!-- 新增/編輯模態框（保持原有功能，僅微調樣式） -->
     <BaseModal v-model="showForm" :title="editing ? '編輯服務' : '新增服務'">
       <form @submit.prevent="submitForm">
         <div class="form-group">
           <label>名稱 *</label>
           <input v-model="form.name" class="input" required />
         </div>
-        <div class="form-group">
+        <!-- <div class="form-group">
           <label>價格 *</label>
           <input v-model.number="form.price" type="number" step="0.01" class="input" required />
         </div>
         <div class="form-group">
           <label>時長(分鐘) *</label>
           <input v-model.number="form.duration_minutes" type="number" class="input" required />
-        </div>
-        <div class="form-group">
+        </div> -->
+        <!-- <div class="form-group">
           <label>描述</label>
           <textarea v-model="form.description" class="textarea" rows="3"></textarea>
-        </div>
-        <div class="form-group">
+        </div> -->
+        <!-- <div class="form-group">
           <label>服務圖片</label>
           <input type="file" @change="onFileChange" accept="image/*" class="file-input" />
           <div v-if="imagePreview" class="image-preview">
@@ -73,7 +73,7 @@
             <img :src="form.image_url" />
             <button type="button" class="btn btn-sm btn-outline" @click="clearImage">清除</button>
           </div>
-        </div>
+        </div> -->
         <div class="form-actions">
           <button type="submit" class="btn" :disabled="loading">{{ loading ? '儲存中...' : '儲存' }}</button>
           <button type="button" class="btn btn-outline" @click="closeForm">取消</button>
@@ -192,13 +192,119 @@ const permanentDelete = async (id: number) => {
 onMounted(loadServices);
 </script>
 
-<!-- <style scoped>
-.header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; flex-wrap: wrap; gap: 10px; }
-.checkbox-label { display: inline-flex; align-items: center; gap: 0.5rem; font-weight: normal; cursor: pointer; }
-.table-wrapper { overflow-x: auto; }
-.deleted-badge { color: #999; font-style: italic; }
-.active-badge { color: #4caf50; font-weight: bold; }
-.image-preview { margin-top: 8px; }
-.image-preview img { max-width: 200px; border-radius: 4px; border: 1px solid var(--border); }
-.file-input { margin-top: 4px; }
-</style> -->
+<style scoped>
+/* 與組合包管理完全一致的樣式（複製自 ServicePackageList.vue） */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: normal;
+  cursor: pointer;
+}
+.table-wrapper {
+  overflow-x: auto;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.data-table th,
+.data-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.data-table th {
+  background: var(--bg);
+  font-weight: 600;
+  color: var(--text);
+}
+.data-table tr:hover td {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.deleted-badge {
+  color: #999;
+  font-style: italic;
+}
+.active-badge {
+  color: #4caf50;
+  font-weight: bold;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: var(--primary);
+  color: white;
+}
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+.btn-outline:hover {
+  background: rgba(var(--primary-rgb), 0.1);
+}
+.btn-danger {
+  background: #e76f51;
+}
+.btn-danger:hover {
+  background: #d45c3c;
+}
+.form-group {
+  margin-bottom: 1rem;
+}
+.form-group label {
+  display: block;
+  margin-bottom: 0.25rem;
+  font-weight: 500;
+}
+.input, .textarea {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+}
+.textarea {
+  resize: vertical;
+}
+.file-input {
+  margin-top: 0.25rem;
+}
+.image-preview {
+  margin-top: 0.5rem;
+}
+.image-preview img {
+  max-width: 200px;
+  border-radius: 4px;
+  border: 1px solid var(--border);
+}
+.form-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+</style>

@@ -1,43 +1,47 @@
 <template>
-  <div class="p-6">
-    <div class="flex justify-between items-center mb-6">
-      <h1 class="text-2xl font-bold">組合包管理</h1>
-      <div class="flex gap-4 items-center">
-        <label class="flex items-center gap-2">
-          <input type="checkbox" v-model="showDeleted" @change="fetchPackages" />
-          <span>顯示已下架</span>
-        </label>
-        <BaseButton @click="goToCreate">新增組合包</BaseButton>
-      </div>
+  <div>
+    <div class="header">
+      <h2>組合包管理</h2>
+      <label class="checkbox-label">
+        <input type="checkbox" v-model="showDeleted" @change="fetchPackages" />
+        顯示已下架
+      </label>
+      <button class="btn" @click="goToCreate">新增組合包</button>
     </div>
 
-    <div class="bg-white rounded-lg shadow overflow-hidden">
-      <table class="min-w-full divide-y divide-gray-200">
-        <thead class="bg-gray-50">
+    <div class="table-wrapper">
+      <table class="data-table">
+        <thead>
           <tr>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">名稱</th>
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">售價</th>
-            <!-- <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">有效天數</th> -->
-            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500">狀態</th>
-            <th class="px-6 py-3 text-right text-xs font-medium text-gray-500">操作</th>
+            <th>名稱</th>
+            <th>售價</th>
+            <th>狀態</th>
+            <th>操作</th>
           </tr>
         </thead>
-        <tbody class="divide-y divide-gray-200">
+        <tbody>
           <tr v-for="pkg in packages" :key="pkg.id">
-            <td class="px-6 py-4">{{ pkg.name }}</td>
-            <td class="px-6 py-4">NT$ {{ pkg.price }}</td>
-            <!-- <td class="px-6 py-4">{{ pkg.duration_days ? pkg.duration_days + ' 天' : '無限期' }}</td> -->
-            <td class="px-6 py-4">
-              <span v-if="pkg.deleted_at" class="text-red-600">已下架</span>
-              <span v-else :class="pkg.is_active ? 'text-green-600' : 'text-red-600'">
+            <td>{{ pkg.name }}</td>
+            <td>NT$ {{ pkg.price }}</td>
+            <td>
+              <span v-if="pkg.deleted_at" class="deleted-badge">已下架</span>
+              <span v-else :class="pkg.is_active ? 'active-badge' : 'inactive-badge'">
                 {{ pkg.is_active ? '啟用' : '停用' }}
               </span>
             </td>
-            <td class="px-6 py-4 text-right space-x-2">
-              <BaseButton size="sm" variant="outline" @click="goToEdit(pkg.id)">編輯</BaseButton>
-              <BaseButton v-if="!pkg.deleted_at" size="sm" variant="danger" @click="confirmDelete(pkg)">下架</BaseButton>
-              <BaseButton v-else size="sm" variant="success" @click="confirmRestore(pkg)">恢復</BaseButton>
+            <td>
+              <template v-if="!pkg.deleted_at">
+                <button class="btn btn-sm" @click="goToEdit(pkg.id)">編輯</button>
+                <button class="btn btn-sm btn-outline" @click="confirmDelete(pkg)">下架</button>
+              </template>
+              <template v-else>
+                <button class="btn btn-sm" @click="confirmRestore(pkg)">恢復</button>
+                <!-- 可選擇加入永久刪除按鈕，但組合包通常保留軟刪除即可 -->
+              </template>
             </td>
+          </tr>
+          <tr v-if="packages.length === 0">
+            <td colspan="4">暫無組合包資料</td>
           </tr>
         </tbody>
       </table>
@@ -49,7 +53,6 @@
 import { ref, onMounted } from 'vue';
 import { useRouter } from 'vue-router';
 import { getPackages, deletePackage, restorePackage, type ServicePackage } from '@/api/modules/servicePackage';
-import BaseButton from '@/components/common/BaseButton.vue';
 
 const router = useRouter();
 const packages = ref<ServicePackage[]>([]);
@@ -58,7 +61,6 @@ const showDeleted = ref(false);
 const fetchPackages = async () => {
   try {
     const res = await getPackages({ include_deleted: showDeleted.value });
-    // 由於 http 攔截器已解包，res 即為 { success, data }
     packages.value = res.data || [];
   } catch (err) {
     console.error('載入組合包失敗', err);
@@ -74,7 +76,7 @@ const goToEdit = (id: string) => {
 };
 
 const confirmDelete = async (pkg: ServicePackage) => {
-  if (confirm(`確定將組合包「${pkg.name}」標記為下架嗎？`)) {
+  if (confirm(`確定將組合包「${pkg.name}」下架嗎？`)) {
     await deletePackage(pkg.id);
     await fetchPackages();
   }
@@ -82,9 +84,7 @@ const confirmDelete = async (pkg: ServicePackage) => {
 
 const confirmRestore = async (pkg: ServicePackage) => {
   if (confirm(`確定恢復組合包「${pkg.name}」嗎？`)) {
-    // 若後端已實作 restorePackage，請取消註解
     await restorePackage(pkg.id);
-    // alert('恢復功能開發中，請稍後');
     await fetchPackages();
   }
 };
@@ -93,3 +93,90 @@ onMounted(() => {
   fetchPackages();
 });
 </script>
+
+<style scoped>
+/* 複用服務管理頁面的樣式（若全域已有則可省略 scoped） */
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+.checkbox-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: normal;
+  cursor: pointer;
+}
+.table-wrapper {
+  overflow-x: auto;
+}
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: var(--surface);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+}
+.data-table th,
+.data-table td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--border);
+  text-align: left;
+}
+.data-table th {
+  background: var(--bg);
+  font-weight: 600;
+  color: var(--text);
+}
+.data-table tr:hover td {
+  background: rgba(var(--primary-rgb), 0.05);
+}
+.deleted-badge {
+  color: #999;
+  font-style: italic;
+}
+.active-badge {
+  color: #4caf50;
+  font-weight: bold;
+}
+.inactive-badge {
+  color: #f44336;
+  font-weight: bold;
+}
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: var(--radius-sm);
+  font-weight: 500;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  border: none;
+  background: var(--primary);
+  color: white;
+}
+.btn-sm {
+  padding: 0.25rem 0.75rem;
+  font-size: 0.875rem;
+}
+.btn-outline {
+  background: transparent;
+  border: 1px solid var(--primary);
+  color: var(--primary);
+}
+.btn-outline:hover {
+  background: rgba(var(--primary-rgb), 0.1);
+}
+.btn-danger {
+  background: #e76f51;
+}
+.btn-danger:hover {
+  background: #d45c3c;
+}
+</style>

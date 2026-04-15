@@ -37,10 +37,11 @@ export const getAdjustment = async (req: Request, res: Response) => {
 
 export const listAdjustments = async (req: Request, res: Response) => {
   try {
-    const { member_service_id, member_package_id, adjustment_type, endDate, page, limit } = req.query;
+    const { member_service_id, member_package_id, customer_name, adjustment_type, endDate, page, limit } = req.query;
     const result = await adjustmentService.list({
       member_service_id: member_service_id ? Number(member_service_id) : undefined,
       member_package_id: member_package_id as string,
+      customer_name: customer_name as string,
       adjustment_type: adjustment_type as any,
       endDate: endDate ? new Date(endDate as string) : undefined,
       page: page ? Number(page) : 1,

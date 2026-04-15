@@ -29,11 +29,32 @@ import Contact from '@/views/public/Contact.vue';
 const router = useRouter();
 </script>
 
-<!-- <style scoped>
+<style scoped>
+
 .hero {
   text-align: center;
   padding: 4rem 2rem;
-  background: linear-gradient(135deg, #fdf8f3 0%, #f9e5d6 100%);
+  background: rgba(255, 255, 255, 0.40); /* 半透明背景，露出底層 Logo */
   border-radius: var(--radius);
+  margin-bottom: 2rem;
+  backdrop-filter: blur(2px);
 }
-</style> -->
+.hero h1 {
+  font-size: 2.5rem;
+  margin-bottom: 1rem;
+  color: #4a3b2f;
+}
+.hero p {
+  font-size: 1.2rem;
+  color: #6b5a4a;
+}
+@media (max-width: 768px) {
+  .hero { padding: 3rem 1.5rem; }
+  .hero h1 { font-size: 2rem; }
+}
+@media (max-width: 576px) {
+  .hero { padding: 2rem 1rem; }
+  .hero h1 { font-size: 1.6rem; }
+}
+
+</style>

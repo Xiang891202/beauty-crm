@@ -19,12 +19,10 @@
       font-size: 1.4rem;
       font-weight: 500;
       color: #50C878;
-    //   color: var(--accent);
       cursor: pointer;
       white-space: nowrap;
     }
     
-    // 汉堡按钮
     .menu-toggle {
       display: none;
       flex-direction: column;
@@ -81,57 +79,12 @@
       }
     }
     
-    // 移动端样式 (max-width: 768px)
+    // 手机版仅显示汉堡按钮，具体菜单样式由组件内的 scoped 样式负责
     @media (max-width: 768px) {
       .menu-toggle {
         display: flex;
       }
-      
-      nav {
-        position: fixed;
-        top: 0;
-        right: -100%;
-        width: 70%;
-        max-width: 280px;
-        height: 100vh;
-        background: var(--surface);
-        flex-direction: column;
-        justify-content: center;
-        gap: 1.5rem;
-        padding: 2rem;
-        box-shadow: -2px 0 8px rgba(0,0,0,0.1);
-        transition: right 0.3s ease;
-        z-index: 1000;
-        
-        &.open {
-          right: 0;
-        }
-        
-        a, button {
-          width: 100%;
-          text-align: center;
-          white-space: normal;
-          padding: 0.5rem;
-          font-size: 1.1rem;
-        }
-        
-        .login-btn, .logout-btn {
-          background: var(--secondary);
-          padding: 0.5rem;
-        }
-      }
     }
-  }
-  
-  // 遮罩层
-  .menu-overlay {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.5);
-    z-index: 999;
   }
   
   main {

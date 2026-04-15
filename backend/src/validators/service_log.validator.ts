@@ -19,6 +19,7 @@ export const updateUsageNotesSchema = Joi.object({
 // 用于列表查询
 export const listUsagesQuerySchema = Joi.object({
   customer_id: Joi.number().integer().positive().optional(),
+  customer_name: Joi.string().optional(),  // 新增
   service_id: Joi.number().integer().positive().optional(),
   startDate: Joi.date().iso().optional(),
   endDate: Joi.date().iso().optional(),

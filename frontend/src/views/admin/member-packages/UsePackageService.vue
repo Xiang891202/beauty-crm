@@ -29,12 +29,12 @@
             <label class="block text-sm font-medium mb-2">贈送禮品（可選）</label>
             <div v-for="(gift, idx) in form.gifts" :key="idx" class="flex gap-2 mb-2">
                 <input v-model="gift.description" placeholder="禮品名稱" class="border rounded p-2 flex-1" />
-                <input v-model="gift.notes" placeholder="備註" class="border rounded p-2 flex-1" />
+                <!-- <input v-model="gift.notes" placeholder="備註" class="border rounded p-2 flex-1" /> -->
                 <BaseButton type="button" variant="danger" size="sm" @click="removeGift(idx)">移除</BaseButton>
             </div>
             <BaseButton type="button" variant="outline" size="sm" @click="addGift">+ 新增贈品</BaseButton>
         </div>
-        
+
         <div>
           <label class="block text-sm font-medium mb-1">備註</label>
           <textarea v-model="form.notes" class="w-full border rounded p-2" rows="2"></textarea>

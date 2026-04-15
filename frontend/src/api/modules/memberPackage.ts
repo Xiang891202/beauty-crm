@@ -79,3 +79,11 @@ export const adjustRemaining = (data: {
 // 查詢使用紀錄
 export const getUsageLogs = (params: { customer_id?: number; member_package_id?: string }): Promise<ApiResponse<any[]>> =>
   http.get('/admin/member-packages/usage-logs', { params });
+
+// 客戶查詢自己的組合包
+export const getMyPackages = (): Promise<ApiResponse<MemberPackage[]>> =>
+  http.get('/public/my/service-packages');
+
+// 客戶查詢自己的使用紀錄（含傳統、組合包、贈品）
+export const getMyUsageLogs = (): Promise<ApiResponse<any[]>> =>
+  http.get('/public/my/usage-logs');

@@ -1,171 +1,158 @@
 <template>
   <div class="adjustment-list">
-    <div class="header">
-      <h2>人工補償記錄</h2>
-      <button class="btn" @click="showForm = true">新增補償</button>
+    <h1>人工補償記錄</h1>
+
+    <!-- 篩選列（簡化，保留主要篩選） -->
+    <div class="filters-bar">
+      <!-- <div class="filter-group">
+        <label>服務授權 ID</label>
+        <input v-model="filters.member_service_id" type="number" placeholder="服務授權 ID" />
+      </div> -->
+      <div class="filter-group">
+        <label>客戶姓名</label>
+        <input v-model="filters.customer_name" placeholder="輸入姓名搜尋" />
+      </div>
+      <div class="filter-group">
+        <label>調整類型</label>
+        <select v-model="filters.adjustment_type" @change="loadAdjustments">
+          <option value="">所有類型</option>
+          <option value="INCREASE">增加</option>
+          <option value="DECREASE">減少</option>
+        </select>
+      </div>
+
+      <!-- <div class="filter-group">
+        <label>結束日期</label>
+        <input v-model="filters.endDate" type="date" />
+      </div> -->
+      <div class="filter-actions">
+        <BaseButton @click="loadAdjustments">查詢</BaseButton>
+        <BaseButton variant="outline" @click="resetFilters">重置</BaseButton>
+        <!-- <BaseButton variant="primary" @click="showForm = true">新增補償</BaseButton> -->
+      </div>
     </div>
 
-    <div class="filters">
-      <input v-model="filters.member_service_id" type="number" class="input" placeholder="服務授權 ID" />
-      <select v-model="filters.adjustment_type" class="input">
-        <option value="">所有類型</option>
-        <option value="INCREASE">增加</option>
-        <option value="DECREASE">減少</option>
-      </select>
-      <!-- <input v-model="filters.startDate" type="date" class="input" placeholder="開始日期" /> -->
-      <input v-model="filters.endDate" type="date" class="input" placeholder="結束日期" />
-      <button class="btn" @click="loadAdjustments">查詢</button>
-      <button class="btn btn-outline" @click="resetFilters">重置</button>
-    </div>
-
-    <div class="table-wrapper">
-      <table class="data-table">
-        <thead>
-          <tr>
-            <th>補償對象</th>
-            <th>類型</th>
-            <th>數量</th>
-            <th>原因</th>
-            <th>建立者</th>
-            <th>建立時間</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="adj in adjustments.items" :key="adj.id">
-            <td>
-              <div v-if="adj.customer">{{ adj.customer.name }}</div>
-              <div v-else>客戶 {{ adj.customer_id }}</div>
-              <div class="text-sm text-gray-500">
-                <span v-if="adj.member_package_id">組合包：{{ adj.package_snapshot_name || adj.member_package_id }}</span>
-                <span v-else>傳統服務包 ID：{{ adj.member_service_id }}</span>
-              </div>
-            </td>
-            <td>{{ adj.adjustment_type === 'INCREASE' ? '增加' : '減少' }}</td>
-            <td>{{ adj.amount }}</td>
-            <td>{{ adj.reason || '-' }}</td>
-            <td>{{ adj.created_by }}</td>
-            <td>{{ formatDate(adj.created_at) }}</td>
-          </tr>
-        </tbody>
-      </table>
-    </div>
-
-
-    <div class="pagination" v-if="totalPages > 1">
-      <button class="btn btn-sm" :disabled="page === 1" @click="page--">上一頁</button>
-      <span>第 {{ page }} 頁 / 共 {{ totalPages }} 頁</span>
-      <button class="btn btn-sm" :disabled="page === totalPages" @click="page++">下一頁</button>
-    </div>
-
-    <!-- 新增表單模態框 -->
-    <div v-if="showForm" class="modal-overlay">
-      <div class="modal-content">
-        <div class="model-header">
-          <h3>新增人工補償</h3>
-          <form @submit.prevent="submitAdjustment">
-            <div>
-              <label>服務授權 ID</label>
-              <input v-model.number="adjustForm.member_service_id" type="number" required />
-              <small>請輸入會員服務的 ID（可從會員詳情頁查看）</small>
+    <div v-if="loading" class="loading">載入中...</div>
+    <div v-else-if="adjustments.items.length === 0" class="empty">暫無調整記錄</div>
+    <div v-else class="records-list">
+      <div v-for="adj in adjustments.items" :key="adj.id" class="record-card">
+        <div class="card-row">
+          <div class="card-info">
+            <div class="card-header">
+              <span class="type-badge">{{ adj.adjustment_type === 'INCREASE' ? '增加' : '減少' }}</span>
+              <span class="customer-name">👤 {{ adj.customer?.name || `客戶 ${adj.customer_id}` }}</span>
+              <span class="occurred-at">{{ formatDate(adj.created_at) }}</span>
             </div>
-            <div class="form-group">
-              <label>調整類型</label>
-              <select v-model="adjustForm.adjustment_type" class="input" required>
-                <option value="INCREASE">增加次數</option>
-                <option value="DECREASE">減少次數</option>
-              </select>
+            <div class="card-title">
+              <span v-if="adj.member_package_id">組合包</span>
+              <span v-else>傳統服務包</span>
             </div>
-            <div class="form-group">
-              <label>數量</label>
-              <input v-model.number="adjustForm.amount" type="number" class="input" required min="1" />
+            <div class="card-description">
+              <span v-if="adj.member_package_id">
+                組合包：{{ adj.package_snapshot_name || adj.member_package_id }}
+              </span>
+              <span v-else>
+                傳統服務包 ID：{{ adj.member_service_id }}
+              </span>
             </div>
-            <div class="form-group">
-              <label>原因</label>
-              <textarea v-model="adjustForm.reason" class="input" required min="1"></textarea>
+            <div class="adjust-detail">
+              調整數量：{{ adj.amount }}
             </div>
-            <div class="form-actions">
-              <button class="btn" type="submit">送出</button>
-              <button class="btn btn-outline" type="button" @click="closeForm">取消</button>
+            <div v-if="adj.reason" class="card-notes">
+              📝 原因：{{ adj.reason }}
             </div>
-          </form>
+          </div>
+          <!-- 補償記錄通常無簽名，此處保留可選區域 -->
+          <!-- <div v-if="adj.signature_url" class="card-signature">
+            <img :src="adj.signature_url" alt="簽名" @click="openSignatureModal(adj.signature_url)" />
+          </div> -->
         </div>
       </div>
     </div>
+
+    <div v-if="totalPages > 1" class="pagination">
+      <BaseButton variant="outline" :disabled="page === 1" @click="page--">上一頁</BaseButton>
+      <span>第 {{ page }} 頁 / 共 {{ totalPages }} 頁</span>
+      <BaseButton variant="outline" :disabled="page === totalPages" @click="page++">下一頁</BaseButton>
+    </div>
+
+    <!-- 新增表單模態框（保持原有結構） -->
+    <BaseModal v-model="showForm" title="新增人工補償">
+      <form @submit.prevent="submitAdjustment">
+        <div class="space-y-4">
+          <div>
+            <label class="block text-sm font-medium mb-1">服務授權 ID</label>
+            <input v-model.number="adjustForm.member_service_id" type="number" class="w-full border rounded p-2" required />
+            <small class="text-xs text-gray-500">請輸入會員服務的 ID（可從會員詳情頁查看）</small>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">調整類型</label>
+            <select v-model="adjustForm.adjustment_type" class="w-full border rounded p-2" required>
+              <option value="INCREASE">增加次數</option>
+              <option value="DECREASE">減少次數</option>
+            </select>
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">數量</label>
+            <input v-model.number="adjustForm.amount" type="number" class="w-full border rounded p-2" required min="1" />
+          </div>
+          <div>
+            <label class="block text-sm font-medium mb-1">原因</label>
+            <textarea v-model="adjustForm.reason" class="w-full border rounded p-2" rows="2" required></textarea>
+          </div>
+          <div class="flex justify-end gap-3 pt-4">
+            <BaseButton variant="outline" type="button" @click="closeForm">取消</BaseButton>
+            <BaseButton type="submit" :loading="loading">送出</BaseButton>
+          </div>
+        </div>
+      </form>
+    </BaseModal>
   </div>
 </template>
 
 <script setup lang="ts">
 import { ref, onMounted, watch } from 'vue';
 import { getAdjustments, createAdjustment, type Adjustment } from '@/api/modules/adjustment';
+import BaseButton from '@/components/common/BaseButton.vue';
+import BaseModal from '@/components/common/BaseModal.vue';
 
-// 數據結構修正：使用包含 items 和 total 的對象
-// 定義篩選條件的型別
-interface Filters {
-  member_service_id: string;
-  member_package_id: string;
-  adjustment_type: string;
-  startDate: string;
-  endDate: string;
-}
-
-// 定義表單資料的型別
-interface AdjustForm {
-  member_service_id: number | null;
-  member_package_id: string | null;
-  adjustment_type: 'INCREASE' | 'DECREASE';
-  amount: number;
-  reason: string;
-}
-
-const adjustments = ref<{ items: Adjustment[]; total: number }>({
-  items: [],
-  total: 0
-});
-
+const adjustments = ref<{ items: Adjustment[]; total: number }>({ items: [], total: 0 });
+const loading = ref(false);
 const page = ref(1);
-const limit = 20;
+const limit = 10;
 const totalPages = ref(1);
 
-// ✅ 明確指定型別，避免推斷錯誤
-const filters = ref<Filters>({
+const filters = ref({
   member_service_id: '',
   member_package_id: '',
+  customer_name: '',
   adjustment_type: '',
-  startDate: '',
   endDate: '',
 });
 
 const showForm = ref(false);
-const adjustForm = ref<AdjustForm>({
-  member_service_id: null,
-  member_package_id: null,
-  adjustment_type: 'INCREASE',
+const adjustForm = ref({
+  member_service_id: null as number | null,
+  adjustment_type: 'INCREASE' as 'INCREASE' | 'DECREASE',
   amount: 1,
   reason: '',
 });
-// const adjustForm = ref({
-//   member_service_id: null as number | null,
-//   member_package_id: null as string | null,
-//   adjustment_type: 'INCREASE' as 'INCREASE' | 'DECREASE',
-//   amount: 1,
-//   reason: '',
-// });
 
 const loadAdjustments = async () => {
+  loading.value = true;
   try {
     const params: any = { page: page.value, limit };
-    if (filters.value.member_service_id) params.member_service_id = filters.value.member_service_id;
-    if (filters.value.member_package_id) params.member_package_id = filters.value.member_package_id; // ✅ 新增
+    if (filters.value.customer_name) params.customer_name = filters.value.customer_name;
+    // if (filters.value.member_service_id) params.member_service_id = filters.value.member_service_id;
+    // if (filters.value.member_package_id) params.member_package_id = filters.value.member_package_id;
     if (filters.value.adjustment_type) params.adjustment_type = filters.value.adjustment_type;
-    if (filters.value.startDate) params.startDate = filters.value.startDate;
     if (filters.value.endDate) params.endDate = filters.value.endDate;
 
     const res = await getAdjustments(params);
     if (res.success && res.data) {
-      // ✅ 正確賦值對象
       adjustments.value = {
         items: res.data.items || [],
-        total: res.data.total || 0
+        total: res.data.total || 0,
       };
       totalPages.value = Math.ceil(adjustments.value.total / limit);
     } else {
@@ -174,7 +161,20 @@ const loadAdjustments = async () => {
   } catch (err) {
     console.error('加載調整記錄失敗', err);
     adjustments.value = { items: [], total: 0 };
+  } finally {
+    loading.value = false;
   }
+};
+
+const resetFilters = () => {
+  filters.value = { member_service_id: '', member_package_id: '', adjustment_type: '', endDate: '', customer_name: '' };
+  page.value = 1;
+  loadAdjustments();
+};
+
+const closeForm = () => {
+  showForm.value = false;
+  adjustForm.value = { member_service_id: null, adjustment_type: 'INCREASE', amount: 1, reason: '' };
 };
 
 const submitAdjustment = async () => {
@@ -187,99 +187,201 @@ const submitAdjustment = async () => {
       member_service_id: adjustForm.value.member_service_id,
       adjustment_type: adjustForm.value.adjustment_type,
       amount: adjustForm.value.amount,
-      reason: adjustForm.value.reason || undefined,
+      reason: adjustForm.value.reason,
     });
     closeForm();
     loadAdjustments();
   } catch (err: any) {
-    console.error('新增調整失敗', err);
     alert(err.response?.data?.error || '操作失敗');
   }
 };
 
-const resetFilters = () => {
-  filters.value = { member_service_id: '', member_package_id: '', adjustment_type: '', startDate: '', endDate: '' };
-  page.value = 1;
-  loadAdjustments();
-};
-
-const closeForm = () => {
-  showForm.value = false;
-  adjustForm.value = { member_service_id: null, member_package_id: null, adjustment_type: 'INCREASE', amount: 1, reason: '' };
-};
-
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString();
+  return new Date(dateStr).toLocaleString('zh-TW', { hour12: false });
 };
 
-watch(page, loadAdjustments);
-onMounted(loadAdjustments);
+const openSignatureModal = (url: string) => {
+  if (url) window.open(url, '_blank');
+};
+
+watch(() => filters.value.adjustment_type, () => {
+  page.value = 1;      // 重置頁碼
+  loadAdjustments();
+});
+
+  watch(page, loadAdjustments);
+  onMounted(loadAdjustments);
 </script>
 
-<!-- <style scoped>
-/* 复用商品管理的样式，可微调 */
-.header {
+<style scoped>
+/* 與 UsageList 相同的樣式 */
+.adjustment-list {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem;
+}
+.adjustment-list h1 {
+  font-size: 1.8rem;
+  margin-bottom: 1.5rem;
+  text-align: center;
+  color: var(--accent);
+}
+
+/* 篩選列 */
+.filters-bar {
+  background: var(--surface);
+  border-radius: var(--radius);
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  box-shadow: var(--shadow);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  align-items: flex-end;
+}
+.filter-group {
+  flex: 1;
+  min-width: 150px;
+}
+.filter-group label {
+  display: block;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+  color: var(--text-light);
+}
+.filter-group input, .filter-group select {
+  width: 100%;
+  padding: 0.5rem;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  background: white;
+}
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+}
+@media (max-width: 768px) {
+  .filters-bar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  .filter-group, .filter-actions {
+    width: 100%;
+  }
+}
+
+/* 卡片網格 */
+.records-list {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+.record-card {
+  background: var(--surface);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow);
+  border: 1px solid var(--border);
+  transition: all 0.2s;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+.record-card:hover {
+  transform: translateY(-2px);
+  box-shadow: var(--shadow-hover);
+}
+.card-row {
   display: flex;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 20px;
+  align-items: flex-start;
+  gap: 1rem;
+  height: 100%;
 }
-.filters {
-  margin-bottom: 20px;
+.card-info {
+  flex: 1;
+  padding-right: 0.5rem;
 }
-.filters input, .filters select {
-  margin-right: 10px;
-  padding: 6px;
-}
-.adjustment-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.adjustment-table th, .adjustment-table td {
-  border: 1px solid #ddd;
-  padding: 8px;
-  text-align: left;
-}
-.adjustment-table th {
-  background-color: #f2f2f2;
-}
-button {
-  margin-right: 8px;
-  padding: 4px 8px;
+.card-signature {
+  flex-shrink: 0;
+  width: 80px;
+  height: 80px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--bg);
   cursor: pointer;
 }
-.pagination {
-  margin-top: 20px;
-  display: flex;
-  gap: 10px;
-  align-items: center;
-}
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
+.card-signature img {
   width: 100%;
   height: 100%;
-  background: rgba(0,0,0,0.5);
+  object-fit: contain;
+}
+@media (max-width: 768px) {
+  .records-list {
+    grid-template-columns: 1fr;
+  }
+  .card-row {
+    flex-direction: column;
+  }
+  .card-signature {
+    width: 100%;
+    height: auto;
+    max-height: 120px;
+  }
+}
+
+/* 卡片內部元件 */
+.card-header {
   display: flex;
-  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+.type-badge {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 20px;
+  background: #e0e0e0;
+  color: #333;
+  font-weight: 500;
+}
+.customer-name, .occurred-at {
+  font-size: 0.8rem;
+  color: #666;
+}
+.card-title {
+  font-weight: 600;
+  font-size: 1rem;
+  margin: 0.25rem 0;
+}
+.card-description {
+  font-size: 0.9rem;
+  color: #666;
+  margin-bottom: 0.25rem;
+}
+.adjust-detail {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--accent);
+  margin-top: 0.25rem;
+}
+.card-notes {
+  font-size: 0.85rem;
+  color: #999;
+  margin-top: 0.5rem;
+  padding-top: 0.5rem;
+  border-top: 1px dashed #ddd;
+}
+.pagination {
+  display: flex;
   justify-content: center;
+  gap: 1rem;
+  margin-top: 2rem;
 }
-.modal-content {
-  background: white;
-  padding: 20px;
-  border-radius: 8px;
-  width: 400px;
+.loading, .empty {
+  text-align: center;
+  padding: 3rem;
+  color: var(--text-light);
 }
-.modal-content input, .modal-content select, .modal-content textarea {
-  width: 100%;
-  margin-bottom: 12px;
-  padding: 6px;
-}
-.actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-}
-</style> -->
+</style>

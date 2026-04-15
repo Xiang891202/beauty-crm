@@ -210,7 +210,7 @@ export const useService = async (params: UseServiceParams) => {
       gift_description: g.description,
       notes: g.notes || `關聯使用紀錄 ${usageLog.id}`,
       service_usage_log_id: usageLog.id,
-      is_redeemed: false,
+      is_redeemed: true,
       created_at: new Date(),
     }));
     const { error: giftsErr } = await supabase.from('package_gifts').insert(giftsToInsert);

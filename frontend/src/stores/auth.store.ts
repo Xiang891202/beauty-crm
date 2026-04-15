@@ -20,6 +20,7 @@ export const useAuthStore = defineStore('auth', () => {
     token.value = data.token;
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(userWithRole));
+    window.dispatchEvent(new Event('auth-login'));
   }
 
   async function login(credentials: { email: string; password: string }) {
@@ -46,17 +47,17 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
+  // frontend/src/stores/auth.store.ts
+// ... 其他導入保持不變
+
   async function logout() {
-    try {
-      await logoutApi();
-    } catch (error) {
-      console.error('登出 API 失敗', error);
-    } finally {
-      user.value = null;
-      token.value = null;
-      localStorage.removeItem('token');
-      localStorage.removeItem('user');
-    }
+    // 直接清除本地狀態，不呼叫後端 API
+    user.value = null;
+    token.value = null;
+    localStorage.removeItem('token');
+    localStorage.removeItem('user');
+    // 跳轉由呼叫方處理，此處不自動跳轉
+    // window.dispatchEvent(new Event('auth-logout'));
   }
 
   async function restoreSession(): Promise<void> {
