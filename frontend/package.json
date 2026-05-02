@@ -10,8 +10,8 @@
     "build:customer": "vue-tsc -b && vite build --mode customer",
     "preview:personal": "vite preview --mode personal",
     "preview:customer": "vite preview --mode customer",
-    "test": "jest",
-    "test:watch": "jest --watch"
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "dependencies": {
     "@element-plus/icons-vue": "^2.3.2",
@@ -24,17 +24,21 @@
     "vue-router": "^5.0.4"
   },
   "devDependencies": {
+    "@pinia/testing": "^1.0.3",
+    "@playwright/test": "^1.59.1",
     "@types/jest": "^30.0.0",
     "@types/node": "^24.12.0",
     "@vitejs/plugin-vue": "^6.0.5",
-    "@vue/test-utils": "^2.4.6",
+    "@vue/test-utils": "^2.4.10",
     "@vue/tsconfig": "^0.9.0",
     "axios-mock-adapter": "^2.1.0",
     "jest": "^30.3.0",
+    "jsdom": "^29.1.1",
     "sass": "^1.98.0",
     "ts-jest": "^29.4.6",
     "typescript": "~5.9.3",
     "vite": "^8.0.1",
+    "vitest": "^4.1.5",
     "vue-tsc": "^3.2.5"
   }
 }
