@@ -2,6 +2,18 @@ import { test, expect } from '@playwright/test';
 
 test.describe('會員 CRUD', () => {
   test('管理員可以新增會員，然後編輯該會員', async ({ page }) => {
+
+    // === Mock 登入 ===
+    await page.route('**/api/auth/login', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: { token: 'test-token', user: { id: 1, role: 'admin' } },
+        }),
+      });
+    });
     // ========== Mock APIs ==========
     let memberList = [
       { id: 1, name: '原始會員', phone: '0912345678' },

@@ -2,6 +2,18 @@ import { test, expect } from '@playwright/test';
 
 test.describe('傳統服務購買與使用', () => {
   test('管理員可以為會員購買傳統服務，並使用該服務', async ({ page }) => {
+
+    // === Mock 登入 ===
+    await page.route('**/api/auth/login', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({
+          success: true,
+          data: { token: 'test-token', user: { id: 1, role: 'admin' } },
+        }),
+      });
+    });
     // ========== Mock APIs ==========
     // 會員詳情
     await page.route('**/api/members/1', (route) => {
