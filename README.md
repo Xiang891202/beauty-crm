@@ -49,6 +49,10 @@ npm run test:all
 
 # 在 frontend 目錄
 npm test && npx playwright test
+CI/CD 自動化測試
+已整合 GitHub Actions，每次 push 到 main 或發送 Pull Request 時會自動執行後端測試 + 前端單元測試 + E2E 測試，確保每次更新安全。
+工作流程檔案：.github/workflows/test.yml
+
 測試涵蓋範圍
 後端單元測試摘要
 測試模組	案例數	重點驗證
@@ -102,7 +106,7 @@ SUPABASE_URL="https://xxx.supabase.co"
 SUPABASE_ANON_KEY="anon-key"
 SUPABASE_SERVICE_KEY="service-key"
 SUPABASE_BUCKET="signatures"
-PORT=3000
+PORT=5001
 3. 安裝相依套件
 bash
 cd backend
@@ -168,13 +172,17 @@ API 概覽
 完整 API 文件請參考 docs/ 資料夾。
 
 未來計畫
+前端單元測試（Vitest + Vue Test Utils）
+
+E2E 測試（Playwright）
+
+CI/CD 自動化測試流程 (GitHub Actions)
+
 套餐過期自動判斷
 
 併發扣次防超扣
 
 客戶端自助查詢與使用服務
-
-CI/CD 自動化測試流程 (GitHub Actions)
 
 簽名板滿版模式
 
