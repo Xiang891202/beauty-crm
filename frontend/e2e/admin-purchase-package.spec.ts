@@ -44,20 +44,34 @@ test.describe('購買組合包', () => {
       });
     });
 
+    // 登入
     await page.goto('/admin/login');
     await page.fill('input[type="email"]', 'test@gmail.com');
     await page.fill('input[type="password"]', '123456');
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/admin\/dashboard/);
 
+    // 前往購買頁面
     await page.goto('/admin/member-packages/purchase?customer_id=1');
     await page.waitForTimeout(500);
+
+    // 選擇客戶
     await page.selectOption('select:first-of-type', '1');
+    // 選擇組合包
     const allSelects = page.locator('select');
     await allSelects.nth(1).selectOption('pkg-1');
+    // 輸入總次數
     await page.fill('input[type="number"]', '5');
+
+    // 註冊 dialog 監聽（購買成功會彈出「購買成功」alert）
+    const dialogPromise = page.waitForEvent('dialog', { timeout: 5000 });
     await page.click('button[type="submit"]');
 
+    const dialog = await dialogPromise;
+    expect(dialog.message()).toContain('購買成功');
+    await dialog.accept();
+
+    // 確認跳轉到會員詳情頁
     await expect(page).toHaveURL(/\/admin\/members\/1/);
   });
 });
