@@ -47,7 +47,7 @@ jobs:
         run: npm ci
 
       - name: Run unit tests (Vitest)
-        run: npm test
+        run: npx vitest run --config vitest.config.ts
 
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
