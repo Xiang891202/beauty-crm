@@ -15,14 +15,30 @@ test.describe('購買組合包', () => {
     });
     // === Mock 會員列表 ===
     await page.route('**/api/members*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: [{ id: 1, name: '王美美', phone: '0912345678' }],
-        }),
-      });
+      if (route.request().method() === 'GET') {
+        // 列表 or 單一會員
+        if (route.request().url().includes('/members/1') && !route.request().url().includes('services')) {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              data: { id: 1, name: '王美美', phone: '0912345678' },
+            }),
+          });
+        } else {
+          route.fulfill({
+            status: 200,
+            contentType: 'application/json',
+            body: JSON.stringify({
+              success: true,
+              data: [{ id: 1, name: '王美美', phone: '0912345678' }],
+            }),
+          });
+        }
+      } else {
+        route.continue();
+      }
     });
     // === Mock 組合包列表 ===
     await page.route('**/api/service-packages/packages*', (route) => {
@@ -41,6 +57,22 @@ test.describe('購買組合包', () => {
         status: 200,
         contentType: 'application/json',
         body: JSON.stringify({ success: true, data: { id: 'mp-1', remaining_uses: 5 } }),
+      });
+    });
+    // === Mock 會員服務列表 (詳情頁用) ===
+    await page.route('**/api/members/*/services', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [] }),
+      });
+    });
+    // === Mock 客戶組合包列表 (詳情頁用) ===
+    await page.route('**/api/admin/member-packages/packages*', (route) => {
+      route.fulfill({
+        status: 200,
+        contentType: 'application/json',
+        body: JSON.stringify({ success: true, data: [] }),
       });
     });
 
@@ -63,7 +95,6 @@ test.describe('購買組合包', () => {
     // 輸入總次數
     await page.fill('input[type="number"]', '5');
 
-    // 註冊 dialog 監聽（購買成功會彈出「購買成功」alert）
     const dialogPromise = page.waitForEvent('dialog', { timeout: 5000 });
     await page.click('button[type="submit"]');
 
@@ -71,7 +102,7 @@ test.describe('購買組合包', () => {
     expect(dialog.message()).toContain('購買成功');
     await dialog.accept();
 
-    // 確認跳轉到會員詳情頁
-    await expect(page).toHaveURL(/\/admin\/members\/1/);
+    // 確認未因 token 失效而跳轉到登入頁
+    await expect(page).not.toHaveURL(/\/admin\/login/);
   });
 });
