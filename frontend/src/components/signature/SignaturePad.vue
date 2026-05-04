@@ -1,122 +1,178 @@
 <template>
   <div class="signature-container">
-    <canvas
-      ref="canvas"
-      class="signature-canvas"
-      width="400"
-      height="200"
-    />
-    <div class="signature-actions">
-      <BaseButton @click="clear">清除</BaseButton>
-      <BaseButton @click="save">確認</BaseButton>
-      <!-- <BaseButton variant="outline" @click="emit('close')">取消</BaseButton> -->
+    <!-- 觸發區域：灰色底線 + 預覽簽名 -->
+    <div class="signature-trigger" @click="openModal">
+      <span class="signature-label">簽名：</span>
+      <div class="signature-line" :class="{ 'has-signature': !!savedSignature }">
+        <img v-if="savedSignature" :src="savedSignature" class="signature-preview" />
+      </div>
     </div>
+
+    <!-- 滿版簽名模態框（傳送到 body） -->
+    <Teleport to="body">
+      <div v-if="showModal" class="signature-modal-overlay">
+        <div class="signature-modal-content">
+          <canvas
+            ref="modalCanvas"
+            class="modal-canvas"
+            @touchstart.prevent
+            @touchmove.prevent
+          />
+          <div class="modal-actions">
+            <BaseButton variant="outline" @click="handleCancel">取消</BaseButton>
+            <BaseButton @click="handleClear">清除</BaseButton>
+            <BaseButton @click="handleConfirm">確認</BaseButton>
+          </div>
+        </div>
+      </div>
+    </Teleport>
   </div>
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import SignaturePad from 'signature_pad'
-import BaseButton from '@/components/common/BaseButton.vue';
-
-const canvas = ref<HTMLCanvasElement | null>(null)
-let pad: SignaturePad | null = null
-
-onMounted(() => {
-  if (canvas.value) {
-    // 确保 Canvas 的实际像素尺寸与属性一致（防止 CSS 缩放）
-    const canvasEl = canvas.value
-    const container = canvasEl.parentElement
-    if (container) {
-      // 可选：让 Canvas 适应容器宽度，但保持宽高比
-      const containerWidth = container.clientWidth
-      if (containerWidth > 0 && containerWidth < 400) {
-        canvasEl.width = containerWidth
-        canvasEl.height = containerWidth * 0.5
-      }
-    }
-
-    pad = new SignaturePad(canvasEl, {
-      backgroundColor: 'rgb(255, 255, 255)',
-      penColor: 'rgb(0, 0, 0)',
-      velocityFilterWeight: 0.7,
-      minWidth: 0.5,
-      maxWidth: 2.5,
-      throttle: 16, // 提高触摸流畅度
-    })
-
-    // 针对触控笔优化
-    canvasEl.addEventListener('pointerdown', (e) => {
-      if (e.pointerType === 'pen') {
-        if (pad) pad.penColor = 'rgb(0, 0, 255)'
-      }
-    })
-
-    // 清除时重新调整尺寸（可选）
-    const originalClear = pad.clear.bind(pad)
-    pad.clear = () => {
-      originalClear()
-      // 重绘背景
-      const ctx = canvasEl.getContext('2d')
-      if (ctx) {
-        ctx.fillStyle = 'rgb(255, 255, 255)'
-        ctx.fillRect(0, 0, canvasEl.width, canvasEl.height)
-      }
-    }
-  }
-})
-
-const clear = () => pad?.clear()
-const save = () => {
-  console.log('save 被調用, pad:', pad, 'isEmpty:', pad?.isEmpty());
-  if (pad && !pad.isEmpty()) {
-    const signatureData = pad.toDataURL();
-    console.log('簽名資料長度:', signatureData.length);
-    emit('save', signatureData);
-  } else {
-    alert('請先簽名');
-  }
-};
+import { ref, nextTick, watch } from 'vue'
+import SignaturePadLib from 'signature_pad'
+import BaseButton from '@/components/common/BaseButton.vue'
 
 const emit = defineEmits<{ (e: 'save', data: string): void }>()
-// const close = () => emit('close');
-// const emit = defineEmits<{
-//   (e: 'success'): void;
-//   (e: 'close'): void;
-// }>();
+
+// 狀態
+const showModal = ref(false)
+const savedSignature = ref<string | null>(null)
+
+// 模態框元素參考
+const modalCanvas = ref<HTMLCanvasElement | null>(null)
+const modalPad = ref<SignaturePadLib | null>(null)
+
+// 打開模態框
+const openModal = () => {
+  showModal.value = true
+}
+
+// 關閉模態框（不保存）
+const handleCancel = () => {
+  showModal.value = false
+}
+
+// 清除簽名
+const handleClear = () => {
+  modalPad.value?.clear()
+}
+
+// 確認簽名
+const handleConfirm = () => {
+  if (!modalPad.value || modalPad.value.isEmpty()) {
+    alert('請先簽名')
+    return
+  }
+  const dataURL = modalPad.value.toDataURL()
+  savedSignature.value = dataURL
+  emit('save', dataURL)
+  showModal.value = false
+}
+
+// 監控模態框開啟，初始化簽名板
+watch(showModal, async (val) => {
+  if (val) {
+    await nextTick()
+    const canvasEl = modalCanvas.value
+    if (canvasEl) {
+      // 設定滿版尺寸（占視窗 90% 寬、70% 高，可依需求調整）
+      canvasEl.width = window.innerWidth * 0.9
+      canvasEl.height = window.innerHeight * 0.7
+      modalPad.value = new SignaturePadLib(canvasEl, {
+        backgroundColor: 'rgb(255, 255, 255)',
+        penColor: 'rgb(0, 0, 0)',
+        velocityFilterWeight: 0.7,
+        minWidth: 0.5,
+        maxWidth: 2.5,
+        throttle: 16,
+      })
+    }
+  } else {
+    // 關閉時清除簽名板實例（下次打開重新建立）
+    modalPad.value = null
+  }
+})
 </script>
 
 <style scoped>
+/* 外層容器 */
 .signature-container {
   width: 100%;
+}
+
+/* 觸發區域：灰色底線 */
+.signature-trigger {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+}
+
+.signature-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.signature-line {
+  flex: 1;
+  min-height: 40px;
+  border-bottom: 2px dashed #aaa;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.2s;
+}
+
+.signature-line.has-signature {
+  border-bottom: none; /* 有簽名時隱藏底線 */
+}
+
+.signature-preview {
+  max-height: 80px;
+  max-width: 100%;
+  object-fit: contain;
+  background: white;
+}
+
+/* 滿版模態框 */
+.signature-modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.85);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.signature-modal-content {
+  background: white;
+  border-radius: 12px;
+  padding: 1rem;
+  width: 95vw;
+  max-width: 800px;
   display: flex;
   flex-direction: column;
   align-items: center;
 }
 
-.signature-canvas {
-  touch-action: none;          /* 禁止触摸时滚动/缩放 */
-  user-select: none;           /* 避免选中 */
-  -webkit-tap-highlight-color: transparent;
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
+.modal-canvas {
+  width: 100%;
+  height: auto;
   background: white;
-  width: 100%;
-  height: auto;                /* 保持比例，实际像素由 width/height 属性控制 */
-  cursor: crosshair;
+  border: 1px solid #ccc;
+  border-radius: 4px;
+  touch-action: none; /* 防止觸控時捲動 */
 }
 
-.signature-actions {
-  margin-top: 0.5rem;
+.modal-actions {
+  margin-top: 1rem;
   display: flex;
-  gap: 0.5rem;
-  justify-content: flex-end;
-  width: 100%;
-}
-
-@media (max-width: 768px) {
-  .signature-canvas {
-    min-height: 150px;         /* 手机上有足够绘制区域 */
-  }
+  gap: 1rem;
+  justify-content: center;
 }
 </style>

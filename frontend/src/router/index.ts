@@ -71,6 +71,13 @@ const routes = [
       { path: 'service-packages/form/:id', component: () => import('@/views/admin/services/ServicePackageForm.vue') },
       { path: 'member-packages/purchase', name: 'MemberPackagePurchase', component: () => import('@/views/admin/member-packages/PurchasePackage.vue') },
       { path: 'gifts', component: () => import('@/views/admin/gifts/GiftList.vue') },
+      // frontend/src/router/index.ts 的 admin children 中加入
+      {
+        path: 'signature',
+        name: 'FullSignature',
+        component: () => import('@/views/admin/signature/FullSignature.vue'),
+        meta: { requiresAuth: true, role: 'admin' }
+      }
     ],
   },
 ];

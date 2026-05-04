@@ -95,14 +95,15 @@ test.describe('購買組合包', () => {
     // 輸入總次數
     await page.fill('input[type="number"]', '5');
 
-    const dialogPromise = page.waitForEvent('dialog', { timeout: 5000 });
-    await page.click('button[type="submit"]');
-
-    const dialog = await dialogPromise;
+    // 使用 Promise.all 確保點擊與 dialog 事件同步
+    const [dialog] = await Promise.all([
+      page.waitForEvent('dialog', { timeout: 5000 }),
+      page.click('button[type="submit"]')
+    ]);
     expect(dialog.message()).toContain('購買成功');
     await dialog.accept();
 
-    // 確認未因 token 失效而跳轉到登入頁
-    await expect(page).not.toHaveURL(/\/admin\/login/);
+    // 等待路由跳轉到會員詳情頁
+    await page.waitForURL(/\/admin\/members\/1/, { timeout: 10000 });
   });
 });

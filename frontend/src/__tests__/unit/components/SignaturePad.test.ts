@@ -1,13 +1,12 @@
-// src/__tests__/unit/components/SignaturePad.test.ts
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { mount } from '@vue/test-utils'
+import { nextTick } from 'vue'
 import SignaturePad from '@/components/signature/SignaturePad.vue'
 
 const mockClear = vi.fn()
 const mockIsEmpty = vi.fn()
 const mockToDataURL = vi.fn()
 
-// 將 mock 設定為可被 new 的 class
 vi.mock('signature_pad', () => ({
   default: class {
     clear = mockClear
@@ -21,27 +20,96 @@ vi.mock('signature_pad', () => ({
   },
 }))
 
-describe('SignaturePad', () => {
-  it('應成功渲染 canvas', () => {
-    const wrapper = mount(SignaturePad)
-    const canvas = wrapper.find('canvas')
-    expect(canvas.exists()).toBe(true)
+describe('SignaturePad (新版)', () => {
+  beforeEach(() => {
+    vi.clearAllMocks()
+    mockIsEmpty.mockReturnValue(false)
+    mockToDataURL.mockReturnValue('data:image/png;base64,abc123')
   })
 
-  it('點擊清除按鈕應呼叫 pad.clear', async () => {
+  // 輔助函數：從 modal 中取得指定文字的按鈕
+  const getModalButton = (text: string): HTMLButtonElement | undefined => {
+    const buttons = document.querySelectorAll('.signature-modal-content button')
+    return Array.from(buttons).find(
+      (btn) => btn.textContent?.includes(text)
+    ) as HTMLButtonElement | undefined
+  }
+
+  it('預設渲染灰色觸發區，沒有 canvas', () => {
     const wrapper = mount(SignaturePad)
-    const clearBtn = wrapper.findAll('button').filter(b => b.text().includes('清除'))[0]
-    await clearBtn.trigger('click')
+    expect(wrapper.find('.signature-trigger').exists()).toBe(true)
+    expect(wrapper.find('canvas').exists()).toBe(false)
+  })
+
+  it('點擊觸發區後打開滿版模態框，canvas 出現', async () => {
+    const wrapper = mount(SignaturePad, { attachTo: document.body })
+    await wrapper.find('.signature-trigger').trigger('click')
+    await nextTick()
+    const canvas = document.querySelector('canvas')
+    expect(canvas).not.toBeNull()
+    wrapper.unmount()
+  })
+
+  it('模態框中點擊「清除」按鈕應呼叫 pad.clear', async () => {
+    const wrapper = mount(SignaturePad, { attachTo: document.body })
+    await wrapper.find('.signature-trigger').trigger('click')
+    await nextTick()
+
+    const clearBtn = getModalButton('清除')
+    expect(clearBtn).toBeDefined()
+    clearBtn!.click()
     expect(mockClear).toHaveBeenCalled()
+    wrapper.unmount()
   })
 
-  it('若簽名為空，點擊確認應彈出提示', async () => {
-    mockIsEmpty.mockReturnValue(true) // 簽名為空
+  it('未簽名時點擊「確認」應彈出 alert', async () => {
+    mockIsEmpty.mockReturnValue(true)
     const alertMock = vi.spyOn(window, 'alert').mockImplementation(() => {})
-    const wrapper = mount(SignaturePad)
-    const saveBtn = wrapper.findAll('button').filter(b => b.text().includes('確認'))[0]
-    await saveBtn.trigger('click')
-    expect(alertMock).toHaveBeenCalled()
+    const wrapper = mount(SignaturePad, { attachTo: document.body })
+    await wrapper.find('.signature-trigger').trigger('click')
+    await nextTick()
+
+    const confirmBtn = getModalButton('確認')
+    expect(confirmBtn).toBeDefined()
+    confirmBtn!.click()
+    expect(alertMock).toHaveBeenCalledWith('請先簽名')
     alertMock.mockRestore()
+    wrapper.unmount()
+  })
+
+  it('已簽名時點擊「確認」應觸發 save 事件、關閉模態框並顯示簽名', async () => {
+    mockIsEmpty.mockReturnValue(false)
+    const wrapper = mount(SignaturePad, { attachTo: document.body })
+    await wrapper.find('.signature-trigger').trigger('click')
+    await nextTick()
+
+    const confirmBtn = getModalButton('確認')
+    expect(confirmBtn).toBeDefined()
+    confirmBtn!.click()
+
+    expect(wrapper.emitted('save')).toBeTruthy()
+    expect(wrapper.emitted('save')![0][0]).toBe('data:image/png;base64,abc123')
+
+    await nextTick()
+    expect(document.querySelector('.signature-modal-overlay')).toBeNull()
+    expect(wrapper.find('.signature-preview').exists()).toBe(true)
+    expect(wrapper.find('.signature-preview').attributes('src')).toBe('data:image/png;base64,abc123')
+
+    wrapper.unmount()
+  })
+
+  it('點擊「取消」按鈕應關閉模態框且不發送 save', async () => {
+    const wrapper = mount(SignaturePad, { attachTo: document.body })
+    await wrapper.find('.signature-trigger').trigger('click')
+    await nextTick()
+
+    const cancelBtn = getModalButton('取消')
+    expect(cancelBtn).toBeDefined()
+    cancelBtn!.click()
+
+    await nextTick()
+    expect(document.querySelector('.signature-modal-overlay')).toBeNull()
+    expect(wrapper.emitted('save')).toBeFalsy()
+    wrapper.unmount()
   })
 })

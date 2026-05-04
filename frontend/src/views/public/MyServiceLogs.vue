@@ -24,7 +24,7 @@
             </div> -->
           </div>
           <div v-if="item.signature_url" class="card-signature">
-            <img :src="item.signature_url" alt="簽名" @click="openSignature(item.signature_url)" />
+            <img :src="item.signature_url" alt="簽名" @click="openSignatureModal(item.signature_url)" />
           </div>
         </div>
       </div>
@@ -79,9 +79,21 @@ const getGiftDescriptions = (item: any): string[] => {
   return [];
 };
 
-const openSignature = (url: string) => {
-  window.open(url, '_blank');
-};
+const openSignatureModal = (url: string) => {
+  if (!url) return
+  const w = window.open('', '_blank')
+  if (w) {
+    w.document.write(`
+      <html>
+        <head><title>簽名圖片</title></head>
+        <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#fff;">
+          <img src="${url.replace(/"/g, '&quot;')}" style="max-width:100%; max-height:100%;" />
+        </body>
+      </html>
+    `)
+    w.document.close()
+  }
+}
 
 const fetchLogs = async () => {
   loading.value = true;

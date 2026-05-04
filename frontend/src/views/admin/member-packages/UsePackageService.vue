@@ -1,3 +1,4 @@
+<!-- frontend/src/views/admin/member-packages/UsePackageService.vue -->
 <template>
   <div class="p-4">
     <form @submit.prevent="submit">
@@ -9,7 +10,6 @@
             <option :value="null" disabled>請選擇組合包</option>
             <option v-for="pkg in memberPackages" :key="pkg.id" :value="pkg.id">
               {{ pkg.snapshot_name }} 
-              <!-- (剩餘 {{ pkg.remaining_uses }} / {{ pkg.total_uses }} 次) -->
             </option>
           </select>
         </div>
@@ -20,7 +20,6 @@
           <div v-for="item in selectedPackage.snapshot_items" :key="item.service_id" class="flex items-center gap-2 mb-1">
             <input type="checkbox" v-model="selectedServiceIds" :value="item.service_id" />
             <span>{{ item.service?.name || `服務 #${item.service_id}` }}</span>
-            <!-- <span class="text-xs text-gray-500">（此組合包內含 {{ item.original_quantity }} 次）</span> -->
           </div>
         </div>
         
@@ -29,7 +28,6 @@
             <label class="block text-sm font-medium mb-2">贈送禮品（可選）</label>
             <div v-for="(gift, idx) in form.gifts" :key="idx" class="flex gap-2 mb-2">
                 <input v-model="gift.description" placeholder="禮品名稱" class="border rounded p-2 flex-1" />
-                <!-- <input v-model="gift.notes" placeholder="備註" class="border rounded p-2 flex-1" /> -->
                 <BaseButton type="button" variant="danger" size="sm" @click="removeGift(idx)">移除</BaseButton>
             </div>
             <BaseButton type="button" variant="outline" size="sm" @click="addGift">+ 新增贈品</BaseButton>
@@ -42,13 +40,18 @@
 
         <div>
           <label class="block text-sm font-medium mb-1">簽名（必填）</label>
-          <SignaturePad ref="signaturePadRef" @save="onSignatureSave" />
-          <BaseButton variant="outline" @click="$emit('close')">取消</BaseButton>
+          <!-- 灰色觸發區域 -->
+          <div class="signature-trigger" @click="openFullSignature">
+            <div class="signature-line" :class="{ 'has-signature': !!form.signature_url }">
+              <img v-if="form.signature_url" :src="form.signature_url" class="signature-preview" />
+              <span v-else class="signature-placeholder">點擊此處進行簽名</span>
+            </div>
+          </div>
         </div>
-        
 
         <div class="flex justify-end gap-3 pt-4">
-          <!-- <BaseButton type="submit" :loading="loading">確認使用</BaseButton> -->
+          <BaseButton type="submit" :loading="loading">確認使用</BaseButton>
+          <BaseButton variant="outline" @click="$emit('close')">取消</BaseButton>
         </div>
       </div>
     </form>
@@ -56,13 +59,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, reactive, onMounted } from 'vue';
+import { ref, reactive, onMounted, onActivated } from 'vue';
 import { getCustomerPackages, useService, type MemberPackage } from '@/api/modules/memberPackage';
 import BaseButton from '@/components/common/BaseButton.vue';
-import SignaturePad from '@/components/signature/SignaturePad.vue';
+import { useRouter } from 'vue-router'
+import { useSignatureStore } from '@/stores/signature.store'
 
 const props = defineProps<{
-  customerId: number;   // 改為接收客戶 ID
+  customerId: number;
 }>();
 
 const emit = defineEmits<{
@@ -70,15 +74,14 @@ const emit = defineEmits<{
   (e: 'close'): void;
 }>();
 
+const router = useRouter()
+const signatureStore = useSignatureStore()
+
 const loading = ref(false);
 const memberPackages = ref<MemberPackage[]>([]);
 const selectedPackageId = ref<string | null>(null);
 const selectedPackage = ref<MemberPackage | null>(null);
 const selectedServiceIds = ref<number[]>([]);
-const onSignatureSave = (data: string) => {
-  console.log('收到簽名資料，長度:', data.length);
-  form.signature_url = data;
-};
 
 const form = reactive({
   notes: '',
@@ -103,8 +106,53 @@ const loadPackages = async () => {
 const onPackageChange = () => {
   const pkg = memberPackages.value.find(p => p.id === selectedPackageId.value);
   selectedPackage.value = pkg || null;
-  selectedServiceIds.value = []; // 重置選中的品項
+  selectedServiceIds.value = [];
 };
+
+// 打開滿版簽名頁面
+const openFullSignature = () => {
+  // 將當前表單狀態暫存到 store
+  signatureStore.startSignature({
+    from: 'package',
+    customerId: props.customerId,
+    selectedPackageId: selectedPackageId.value ?? undefined,
+    selectedServiceIds: [...selectedServiceIds.value],
+    notes: form.notes,
+    gifts: form.gifts,
+  })
+  router.push('/admin/signature')
+}
+
+// 檢查是否有從滿版簽名頁返回的結果
+const checkSignatureResult = () => {
+  const { context, signature } = signatureStore.getResultAndClear()
+  if (context && context.from === 'package') {
+    // 恢復簽名圖片
+    if (signature) {
+      form.signature_url = signature
+    }
+    // 恢復選取的組合包（如果還在選項列表中）
+    if (context.selectedPackageId) {
+      const exists = memberPackages.value.some(p => p.id === context.selectedPackageId)
+      if (exists) {
+        selectedPackageId.value = context.selectedPackageId!
+        onPackageChange()
+      }
+    }
+    // 恢復服務項目
+    if (context.selectedServiceIds && context.selectedServiceIds.length > 0) {
+      selectedServiceIds.value = [...context.selectedServiceIds]
+    }
+    // 恢復備註
+    if (context.notes) {
+      form.notes = context.notes
+    }
+    // 恢復贈品
+    if (context.gifts && context.gifts.length > 0) {
+      form.gifts = [...context.gifts]
+    }
+  }
+}
 
 const submit = async () => {
   if (!selectedPackageId.value) {
@@ -136,7 +184,44 @@ const submit = async () => {
   }
 };
 
-onMounted(() => {
-  loadPackages();
+// 組件掛載時載入套餐，並檢查簽名結果
+onMounted(async () => {
+  await loadPackages();
+  // 只在有掛載時檢查，避免與 activated 重複
+  if (!memberPackages.value.length) return;
+  checkSignatureResult();
+});
+
+// 若使用了 keep-alive，則在 activated 時也檢查
+onActivated(() => {
+  checkSignatureResult();
 });
 </script>
+
+<style scoped>
+.signature-trigger {
+  cursor: pointer;
+}
+.signature-line {
+  min-height: 40px;
+  border-bottom: 2px dashed #aaa;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.signature-line.has-signature {
+  border-bottom: none;
+}
+.signature-preview {
+  max-height: 80px;
+  max-width: 100%;
+  background: white;
+}
+.signature-placeholder {
+  color: #999;
+  font-size: 0.9rem;
+}
+</style>

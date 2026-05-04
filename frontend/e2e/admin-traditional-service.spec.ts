@@ -3,141 +3,93 @@ import { test, expect } from '@playwright/test';
 test.describe('傳統服務購買與使用', () => {
   test('管理員可以為會員購買傳統服務，並使用該服務', async ({ page }) => {
 
-    // === Mock 登入 ===
-    await page.route('**/api/auth/login', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: { token: 'test-token', user: { id: 1, role: 'admin' } },
-        }),
-      });
-    });
-    // ========== Mock APIs ==========
-    // 會員詳情
-    await page.route('**/api/members/1', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: { id: 1, name: '王美美', phone: '0912345678' },
-        }),
-      });
-    });
+    // === Mock 登入與 profile ===
+    await page.route('**/api/auth/login', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { token: 'test-token', user: { id: 1, role: 'admin' } } }),
+    }));
+    await page.route('**/api/auth/profile', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { id: 1, email: 'test@gmail.com', role: 'admin' } }),
+    }));
 
-    // 全部服務列表 (購買用)
-    await page.route('**/api/services*', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: [
-            { id: 1, name: '臉部保濕', price: 800 },
-            { id: 2, name: '深層清潔', price: 1200 },
-          ],
-        }),
-      });
-    });
+    // === 會員詳情 ===
+    await page.route('**/api/members/1', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { id: 1, name: '王美美', phone: '0912345678' } }),
+    }));
 
-    // 購買傳統服務
-    await page.route('**/api/member-services', (route) => {
-      route.fulfill({
-        status: 201,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: {
-            id: 10,
-            customer_id: 1,
-            service_id: 1,
-            total_sessions: 5,
-            remaining_sessions: 5,
-            service: { id: 1, name: '臉部保濕' },
-          },
-        }),
-      });
-    });
+    // === 服務列表 ===
+    await page.route('**/api/services*', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: [{ id: 1, name: '臉部保濕', price: 800 }] }),
+    }));
 
-    // 會員目前的服務方案 (使用服務時下拉選單)
-    await page.route('**/api/members/1/services', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: [
-            {
-              id: 10,
-              service_id: 1,
-              remaining_sessions: 5,
-              service: { id: 1, name: '臉部保濕' },
-            },
-          ],
-        }),
-      });
-    });
+    // === 購買傳統服務 ===
+    await page.route('**/api/member-services', (route) => route.fulfill({
+      status: 201, contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: { id: 10, customer_id: 1, service_id: 1, total_sessions: 5, remaining_sessions: 5, service: { id: 1, name: '臉部保濕' } },
+      }),
+    }));
 
-    // 使用傳統服務 API
-    await page.route('**/api/service-logs', (route) => {
-      route.fulfill({
-        status: 200,
-        contentType: 'application/json',
-        body: JSON.stringify({
-          success: true,
-          data: { id: 1, remaining: 4 },
-        }),
-      });
-    });
+    // === 會員服務方案列表 (使用服務時下拉選單) ===
+    await page.route('**/api/members/1/services', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({
+        success: true,
+        data: [{ id: 10, service_id: 1, remaining_sessions: 5, service: { id: 1, name: '臉部保濕' } }],
+      }),
+    }));
 
-    // ========== 測試流程 ==========
+    // === 使用傳統服務 API ===
+    await page.route('**/api/service-logs', (route) => route.fulfill({
+      status: 200, contentType: 'application/json',
+      body: JSON.stringify({ success: true, data: { id: 1, remaining: 4 } }),
+    }));
 
-    // 1. 管理員登入
+    // ========== 1. 登入 ==========
     await page.goto('/admin/login');
     await page.fill('input[type="email"]', 'test@gmail.com');
     await page.fill('input[type="password"]', '123456');
     await page.click('button[type="submit"]');
     await page.waitForURL(/\/admin\/dashboard/);
 
-    // 2. 前往會員詳情
+    // ========== 2. 前往會員詳情 ==========
     await page.goto('/admin/members/1');
     await page.waitForTimeout(500);
 
-    // 3. 購買傳統服務
-    // 點擊「購買傳統服務」按鈕
+    // ========== 3. 購買傳統服務 ==========
     await page.getByText('購買傳統服務').first().click();
     await page.waitForTimeout(500);
 
-    // 選擇服務
-    await page.selectOption('select', '1'); // 第一個服務
-    // 輸入購買次數
-    await page.fill('input[type="number"]', '5');
-    // 點擊購買按鈕
-    await page.click('button[type="submit"]');
+    await page.selectOption('select', '1');          // 選擇「臉部保濕」
+    await page.fill('input[type="number"]', '5');    // 次數
+    await page.click('button[type="submit"]');       // 購買
 
-    // 處理成功訊息 alert
-    page.on('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('購買成功');
-      await dialog.accept();
-    });
+    // 購買成功後 modal 會自動關閉，等待 overlay 消失
+    await page.waitForSelector('.modal-overlay', { state: 'detached' });
+    await page.waitForTimeout(300);
 
-    // 等待 modal 關閉
-    await page.waitForTimeout(500);
-
-    // 4. 使用傳統服務
-    // 點擊「使用傳統服務」按鈕
+    // ========== 4. 驗證購買成功 ==========
+    // 再次打開「使用傳統服務」模態框，下拉選單應包含剛購買的服務方案
     await page.getByText('使用傳統服務').first().click();
     await page.waitForTimeout(500);
 
-    // 選擇服務方案 (應該只有一個)
-    await page.selectOption('select', '10'); // value 是 member_service_id
+    // 檢查下拉選單中是否有「剩餘 5 次」的選項
+    const selectEl = page.locator('select');
+    await expect(selectEl).toContainText('剩餘 5 次');
 
-    // 輸入備註
+    // 選擇該方案
+    await selectEl.selectOption('10');
     await page.fill('textarea', '測試備註');
 
-    // 模擬簽名：在 canvas 上畫一條線
+    // 點擊灰色簽名觸發區 → 導航到滿版簽名頁
+    await page.locator('.signature-trigger').click();
+    await page.waitForURL('**/admin/signature');
+
+    // 在滿版 canvas 上繪製簽名
     const canvas = page.locator('canvas');
     const box = await canvas.boundingBox();
     if (box) {
@@ -149,16 +101,18 @@ test.describe('傳統服務購買與使用', () => {
       await page.mouse.up();
     }
 
-    // 點擊送出使用
-    await page.click('button[type="submit"]');
+    // 點擊「確認」按鈕，返回會員詳情頁
+    await page.click('button:has-text("確認")');
+    await page.waitForURL('**/admin/members/1');
+    await page.waitForTimeout(300);
 
-    // 驗證成功訊息
-    page.on('dialog', async (dialog) => {
-      expect(dialog.message()).toContain('使用成功');
-      await dialog.accept();
-    });
+    // 確認簽名預覽圖片出現
+    await expect(page.locator('.signature-preview')).toBeVisible();
 
-    // 等待結果
-    await page.waitForTimeout(500);
+    // 點擊「送出使用」
+    await page.click('button[type="submit"]:has-text("送出使用")');
+
+    // 驗證成功：modal 會立即關閉（因為 emit('success') 會觸發父元件關閉它）
+    await page.waitForSelector('.modal-overlay', { state: 'detached', timeout: 5000 });
   });
 });

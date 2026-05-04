@@ -97,8 +97,20 @@ const formatDateTime = (dateStr: string) => {
 };
 
 const openSignatureModal = (url: string) => {
-  window.open(url, '_blank');
-};
+  if (!url) return
+  const w = window.open('', '_blank')
+  if (w) {
+    w.document.write(`
+      <html>
+        <head><title>簽名圖片</title></head>
+        <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#fff;">
+          <img src="${url.replace(/"/g, '&quot;')}" style="max-width:100%; max-height:100%;" />
+        </body>
+      </html>
+    `)
+    w.document.close()
+  }
+}
 
 const getServiceNames = (item: UnifiedRecord) => {
   if (item.raw?.items && Array.isArray(item.raw.items)) {

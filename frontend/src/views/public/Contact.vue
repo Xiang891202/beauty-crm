@@ -3,13 +3,24 @@
     <h2>聯絡我們</h2>
     <div class="contact-layout">
       <div class="contact-info">
-        <p>📞 電話：02-1234-5678</p>
+        <!-- <p>📞 電話：02-1234-5678</p> -->
         <p>📍 地址：高雄市鼓山區青海路181號3樓（莊大衛髮型概念沙龍樓上）</p>
         <p>⏰ 營業時間：週一至週六 10:30 - 21:00，週日公休</p>
-        <p>💬 Line：@276titgx</p>
+        <p style="color: red;">!!!如果有需要其他的時間，請先從下方的 LINE 連結 進行聯絡!!!</p>
+        <p>
+          💬 Line：
+          <a
+            href="https://line.me/R/ti/p/@276titgx"
+            target="_blank"
+            rel="noopener noreferrer"
+            class="line-link"
+          >
+            @276titgx
+          </a>
+        </p>
         <p>🚆 火車：台鐵美術館站（步行約9分鐘）</p>
         <p>🚈 輕軌：C20台鐵美術館站（步行約9分鐘）或 C21美術館站（步行約10分鐘）</p>
-        <p>🅿️ 附近有停車場</p>
+        <!-- <p>🅿️ 附近有停車場</p> -->
       </div>
       <div class="map-container">
         <img src="/images/地圖.jpg" alt="交通路線圖" class="map-image" />
@@ -57,6 +68,15 @@ h2 {
   border-radius: 12px;
   box-shadow: 0 4px 12px rgba(0,0,0,0.1);
   object-fit: contain;
+}
+
+.line-link {
+  color: #06c755;
+  font-weight: bold;
+  text-decoration: underline;
+}
+.line-link:hover {
+  color: #05a54a;
 }
 /* 手機版改為上圖下文 */
 @media (max-width: 768px) {

@@ -20,7 +20,11 @@
       </nav>
     </aside>
     <main class="content">
-      <router-view />
+      <router-view v-slot="{ Component }">
+        <keep-alive include="MemberDetail">
+          <component :is="Component" />
+        </keep-alive>
+      </router-view>
     </main>
     <div v-if="menuOpen" class="menu-overlay" @click="closeMenu"></div>
   </div>

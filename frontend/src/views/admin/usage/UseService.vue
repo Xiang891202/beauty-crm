@@ -1,3 +1,4 @@
+<!-- frontend/src/views/admin/usage/UseService.vue -->
 <template>
   <div class="use-service-form">
     <form @submit.prevent="handleSubmit">
@@ -17,24 +18,15 @@
         <textarea v-model="notes" rows="3" class="textarea" placeholder="可選"></textarea>
       </div>
 
-      <!-- 签名区域 -->
+      <!-- 签名区域 – 灰色触发框 -->
       <div class="form-group">
-        <label>簽名</label>
-        <canvas
-          ref="signatureCanvas"
-          width="400"
-          height="200"
-          class="signature-canvas"
-          @mousedown="startDrawing"
-          @mousemove="draw"
-          @mouseup="stopDrawing"
-          @mouseleave="stopDrawing"
-          @touchstart="startDrawingTouch"
-          @touchmove="drawTouch"
-          @touchend="stopDrawing"
-          @touchcancel="stopDrawing"
-        ></canvas>
-        <button type="button" class="btn btn-outline btn-sm" @click="clearCanvas">清除簽名</button>
+        <label>簽名（必填）</label>
+        <div class="signature-trigger" @click="openFullSignature">
+          <div class="signature-line" :class="{ 'has-signature': !!signatureUrl }">
+            <img v-if="signatureUrl" :src="signatureUrl" class="signature-preview" />
+            <span v-else class="signature-placeholder">點擊此處進行簽名</span>
+          </div>
+        </div>
       </div>
 
       <!-- 操作按钮 -->
@@ -48,13 +40,12 @@
   </div>
 </template>
 
-
-
 <script setup lang="ts">
-import { ref, onMounted } from 'vue';
+import { ref, onMounted, onActivated } from 'vue';
 import { createUsage } from '@/api/modules/usage';
 import { getMemberServices } from '@/api/modules/member';
-import SignaturePad from '@/components/signature/SignaturePad.vue';
+import { useRouter } from 'vue-router'
+import { useSignatureStore } from '@/stores/signature.store'
 
 interface MemberService {
   id: number;
@@ -70,101 +61,57 @@ const notes = ref('');
 const props = defineProps<{ memberId: number; preselectServiceId?: number }>();
 const emit = defineEmits(['success', 'close']);
 
+const router = useRouter()
+const signatureStore = useSignatureStore()
+
 const memberServices = ref<MemberService[]>([]);
 const selectedMemberServiceId = ref<number | null>(null);
 const loading = ref(false);
 const message = ref('');
 const isError = ref(false);
-const signatureCanvas = ref<HTMLCanvasElement | null>(null);
-let ctx: CanvasRenderingContext2D | null = null;
-let drawing = false;
 
-onMounted(async () => {
-  try {
-    const res = await getMemberServices(props.memberId);
-    // 修正：res 已是 { success, data }，data 是陣列
-    if (res.success && Array.isArray(res.data)) {
-      memberServices.value = res.data.filter((ms: MemberService) => ms.remaining_sessions > 0);
-    } else {
-      memberServices.value = [];
-    }
-    if (memberServices.value.length === 0) {
-      message.value = '此會員尚無有效服務方案';
-      isError.value = true;
-    }
-    // 预设选中
-    if (props.preselectServiceId && memberServices.value.length) {
-      const found = memberServices.value.find(ms => ms.id === props.preselectServiceId);
-      if (found) selectedMemberServiceId.value = found.id;
-    }
-  } catch (err) {
-    console.error(err);
-    message.value = '加載服務方案失敗';
-    isError.value = true;
-  }
-  // ... 繪圖初始化部分不變
+// 用于显示灰色框内的签名预览
+const signatureUrl = ref<string>('');
 
-  if (signatureCanvas.value) {
-    ctx = signatureCanvas.value.getContext('2d');
-    if (ctx) {
-      ctx.fillStyle = '#fff';
-      ctx.fillRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height);
-      ctx.strokeStyle = '#000';
-      ctx.lineWidth = 2;
-      ctx.lineCap = 'round';
-      ctx.lineJoin = 'round';
+// 打开满版签名页
+const openFullSignature = () => {
+  signatureStore.startSignature({
+    from: 'traditional',
+    memberId: props.memberId,
+    preselectServiceId: selectedMemberServiceId.value ?? undefined,
+    serviceNotes: notes.value,
+  })
+  router.push('/admin/signature')
+}
+
+// 检查從满版签名返回的结果
+const checkSignatureResult = () => {
+  const { context, signature } = signatureStore.getResultAndClear()
+  if (context && context.from === 'traditional') {
+    if (signature) {
+      signatureUrl.value = signature
+    }
+    if (context.serviceNotes) {
+      notes.value = context.serviceNotes
+    }
+    if (context.preselectServiceId) {
+      selectedMemberServiceId.value = context.preselectServiceId
     }
   }
-});
+}
 
-const startDrawing = (e: MouseEvent) => {
-  if (!ctx || !signatureCanvas.value) return;
-  drawing = true;
-  const rect = signatureCanvas.value.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x, y);
-  ctx.stroke();
-};
-
-const draw = (e: MouseEvent) => {
-  if (!drawing || !ctx || !signatureCanvas.value) return;
-  const rect = signatureCanvas.value.getBoundingClientRect();
-  const x = e.clientX - rect.left;
-  const y = e.clientY - rect.top;
-  ctx.lineTo(x, y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-};
-
-const stopDrawing = () => {
-  drawing = false;
-  if (ctx) ctx.beginPath();
-};
-
-const clearCanvas = () => {
-  if (ctx && signatureCanvas.value) {
-    ctx.clearRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height);
-    ctx.fillStyle = '#fff';
-    ctx.fillRect(0, 0, signatureCanvas.value.width, signatureCanvas.value.height);
+// 将 base64 dataURL 转换为 File 对象（兼容后端 FormData 上传）
+const dataURLtoFile = (dataURL: string, filename: string): File => {
+  const arr = dataURL.split(',')
+  const mime = arr[0].match(/:(.*?);/)![1]
+  const bstr = atob(arr[1])
+  let n = bstr.length
+  const u8arr = new Uint8Array(n)
+  while (n--) {
+    u8arr[n] = bstr.charCodeAt(n)
   }
-};
-
-const getSignatureFile = (): Promise<File> => {
-  return new Promise((resolve) => {
-    if (!signatureCanvas.value) {
-      resolve(new File([], 'empty.png'));
-      return;
-    }
-    signatureCanvas.value.toBlob((blob) => {
-      const file = new File([blob!], 'signature.png', { type: 'image/png' });
-      resolve(file);
-    });
-  });
-};
+  return new File([u8arr], filename, { type: mime })
+}
 
 const handleSubmit = async () => {
   if (!selectedMemberServiceId.value) {
@@ -180,13 +127,19 @@ const handleSubmit = async () => {
     return;
   }
 
+  if (!signatureUrl.value) {
+    message.value = '請先簽名';
+    isError.value = true;
+    return;
+  }
+
   loading.value = true;
   message.value = '';
   isError.value = false;
 
   try {
-    const signatureFile = await getSignatureFile();
-    const formData = new FormData(); // 在这里创建
+    const signatureFile = dataURLtoFile(signatureUrl.value, 'signature.png');
+    const formData = new FormData();
     formData.append('member_service_id', String(selectedMemberServiceId.value));
     formData.append('customer_id', String(props.memberId));
     formData.append('service_id', String(selectedMs.service_id));
@@ -200,7 +153,7 @@ const handleSubmit = async () => {
 
     message.value = `使用成功！剩餘次數：${remaining}`;
     emit('success', { remaining });
-    clearCanvas();
+    signatureUrl.value = '';  // 清空签名预览
   } catch (err: any) {
     console.error(err);
     message.value = err.response?.data?.error || '使用失敗，請稍後再試';
@@ -210,36 +163,64 @@ const handleSubmit = async () => {
   }
 };
 
-// 触摸开始
-const startDrawingTouch = (e: TouchEvent) => {
-  e.preventDefault(); // 阻止滚动
-  if (!ctx || !signatureCanvas.value) return;
-  const rect = signatureCanvas.value.getBoundingClientRect();
-  const touch = e.touches[0];
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-  ctx.lineTo(x, y);
-  ctx.stroke();
-  drawing = true;
-};
+// 载入会员服务
+onMounted(async () => {
+  try {
+    const res = await getMemberServices(props.memberId);
+    if (res.success && Array.isArray(res.data)) {
+      memberServices.value = res.data.filter((ms: MemberService) => ms.remaining_sessions > 0);
+    } else {
+      memberServices.value = [];
+    }
+    if (memberServices.value.length === 0) {
+      message.value = '此會員尚無有效服務方案';
+      isError.value = true;
+    }
+    if (props.preselectServiceId && memberServices.value.length) {
+      const found = memberServices.value.find(ms => ms.id === props.preselectServiceId);
+      if (found) selectedMemberServiceId.value = found.id;
+    }
+  } catch (err) {
+    console.error(err);
+    message.value = '加載服務方案失敗';
+    isError.value = true;
+  }
+  // 检查签名恢复
+  checkSignatureResult();
+});
 
-// 触摸移动
-const drawTouch = (e: TouchEvent) => {
-  e.preventDefault();
-  if (!drawing || !ctx || !signatureCanvas.value) return;
-  const rect = signatureCanvas.value.getBoundingClientRect();
-  const touch = e.touches[0];
-  const x = touch.clientX - rect.left;
-  const y = touch.clientY - rect.top;
-  ctx.lineTo(x, y);
-  ctx.stroke();
-  ctx.beginPath();
-  ctx.moveTo(x, y);
-};
+// keep-alive 激活时也检查恢复
+onActivated(() => {
+  checkSignatureResult();
+});
 </script>
 
-<!-- <style scoped>
-/* 样式保持不变 */
-</style> -->
+<style scoped>
+/* 保留原有样式，仅添加签名相关样式 */
+.signature-trigger {
+  cursor: pointer;
+}
+.signature-line {
+  min-height: 40px;
+  border-bottom: 2px dashed #aaa;
+  background: #f5f5f5;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+.signature-line.has-signature {
+  border-bottom: none;
+}
+.signature-preview {
+  max-height: 80px;
+  max-width: 100%;
+  background: white;
+}
+.signature-placeholder {
+  color: #999;
+  font-size: 0.9rem;
+}
+/* 原有样式保持不动 */
+</style>
