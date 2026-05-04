@@ -25,7 +25,7 @@
 
 ## 測試（Testing）
 
-> 本專案已建立完整的「測試金字塔」，共 **123 個自動化測試案例**，涵蓋單元、整合、端對端測試，確保商業邏輯正確性與系統穩定性。
+> 本專案已建立完整的「測試金字塔」，共 **126 個自動化測試案例**，涵蓋單元、整合、端對端測試，確保商業邏輯正確性與系統穩定性。
 
 ### 為什麼要測試？
 - **商轉系統不容出錯**：任何一次更新都可能破壞扣次、調整、組合包購買等核心流程，自動化測試能在幾分鐘內驗證所有功能。
@@ -39,7 +39,7 @@
 |------|------|----------|----------|----------|
 | 後端單元測試 | Jest | Services, Middleware, Validators, Utils | `cd backend && npx jest --config jest.config.js` | 70 |
 | 後端整合測試 | Jest + Supertest | 完整 HTTP 請求流程 (路由、權限、控制器) | `cd backend && npm run test:integration` | 13 |
-| 前端單元測試 | Vitest + Vue Test Utils | Composables, Store, Components, API 模組, Utils, Router Guards | `cd frontend && npm test` | 32 |
+| 前端單元測試 | Vitest + Vue Test Utils | Composables, Store, Components, API 模組, Utils, Router Guards | `cd frontend && npm test` | 35 |
 | 前端 E2E 測試 | Playwright | 真實瀏覽器操作完整使用者流程 | `cd frontend && npx playwright test` | 8 |
 
 **一次執行所有測試（後端 + 前端）：**
@@ -74,20 +74,21 @@ Utils	5	JWT, response, upload
 測試模組	案例數	重點驗證
 Composables (useIdleTimeout)	3	閒置逾時對話框、token 控管、繼續使用重置計時
 Store (auth.store)	4	登入後 token/user 寫入 localStorage、登出清除、isLoggedIn getter
-Components (SignaturePad)	3	canvas 渲染、清除按鈕、簽名為空時 alert
+Components (SignaturePad)	6	灰色觸發區、模態框渲染、清除、未簽名 alert、已簽名 save 事件、取消關閉
 API 模組 (memberPackage, adjustment)	8	POST/GET 請求參數、回傳值解構
 Utils (format)	3	日期、日期時間、貨幣格式化
 Router 守衛	5	未登入重導向、角色不符拒絕、已登入跳過登入頁
+Components (Login, UsageList)	6	登入表單、使用紀錄列表渲染
 前端 E2E 測試摘要
 測試場景	驗證重點
 管理員成功登入並查看儀表板	Token 儲存、API mock、統計卡片渲染
 錯誤帳密顯示錯誤訊息	表單驗證、錯誤 class 出現
-管理員為客戶購買組合包	選擇客戶/組合包、填寫表單、提交後跳轉
-管理員幫會員使用服務（扣次）	模態框互動、選擇組合包、勾選服務、canvas 簽名板存在
+管理員為客戶購買組合包	選擇客戶/組合包、填寫表單、alert 處理、頁面跳轉
+管理員幫會員使用服務（扣次）	模態框互動、選擇組合包、勾選服務、滿版簽名路由
 客戶登入後查看療程包	客戶端登入、療程包列表渲染
 人工補償記錄查詢	篩選、列表正確顯示卡片
-傳統服務購買與使用	購買模態框、使用服務表單、canvas 簽名模擬、成功訊息
-會員新增與編輯 (CRUD)	表單填寫與驗證、模態框開關、提交後列表刷新
+傳統服務購買與使用	購買模態框、驗證下拉選單出現新方案、滿版簽名路由、modal 關閉驗證
+會員新增與編輯 (CRUD)	表單填寫與驗證、模態框開關、提交後列表刷新、alert 驗證
 快速開始
 1. 環境需求
 Node.js >= 18
@@ -178,13 +179,13 @@ E2E 測試（Playwright）
 
 CI/CD 自動化測試流程 (GitHub Actions)
 
+簽名板滿版模式（含組合包與傳統服務）
+
 套餐過期自動判斷
 
 併發扣次防超扣
 
 客戶端自助查詢與使用服務
-
-簽名板滿版模式
 
 管理員備註流程優化（簽名後一併送出、扣次、記錄）
 
