@@ -64,26 +64,23 @@ test.describe('傳統服務購買與使用', () => {
     await page.getByText('購買傳統服務').first().click();
     await page.waitForTimeout(500);
 
-    await page.selectOption('select', '1');          // 選擇「臉部保濕」
-    await page.fill('input[type="number"]', '5');    // 次數
-    await page.click('button[type="submit"]');       // 購買
+    await page.selectOption('select', '1');
+    await page.fill('input[type="number"]', '5');
+    await page.click('button[type="submit"]');
 
     // 購買成功後 modal 會自動關閉，等待 overlay 消失
     await page.waitForSelector('.modal-overlay', { state: 'detached' });
     await page.waitForTimeout(300);
 
     // ========== 4. 驗證購買成功 ==========
-    // 再次打開「使用傳統服務」模態框，下拉選單應包含剛購買的服務方案
     await page.getByText('使用傳統服務').first().click();
     await page.waitForTimeout(500);
 
-    // 檢查下拉選單中是否有「剩餘 5 次」的選項
     const selectEl = page.locator('select');
     await expect(selectEl).toContainText('剩餘 5 次');
 
-    // 選擇該方案
+        // 選擇該方案
     await selectEl.selectOption('10');
-    await page.fill('textarea', '測試備註');
 
     // 點擊灰色簽名觸發區 → 導航到滿版簽名頁
     await page.locator('.signature-trigger').click();
@@ -112,7 +109,7 @@ test.describe('傳統服務購買與使用', () => {
     // 點擊「送出使用」
     await page.click('button[type="submit"]:has-text("送出使用")');
 
-    // 驗證成功：modal 會立即關閉（因為 emit('success') 會觸發父元件關閉它）
+    // 驗證成功：modal 關閉
     await page.waitForSelector('.modal-overlay', { state: 'detached', timeout: 5000 });
   });
 });

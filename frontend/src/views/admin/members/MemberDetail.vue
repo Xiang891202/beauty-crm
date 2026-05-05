@@ -9,9 +9,9 @@
 
      <div class="actions flex gap-3 mt-6">
        <BaseButton @click="router.push(`/admin/member-packages/purchase?customer_id=${member.id}`)">購買組合包</BaseButton>
-       <BaseButton size="sm" @click="usePackageService">使用組合包</BaseButton>
+       <BaseButton size="sm" @click="usePackageService" style="color: white; background-color: #007bff;">使用組合包</BaseButton>
       <BaseButton @click="showPurchaseModal = true">購買傳統服務</BaseButton>
-      <BaseButton @click="showUseService = true">使用傳統服務</BaseButton>
+      <BaseButton @click="showUseService = true" style="color: white; background-color: #007bff;">使用傳統服務</BaseButton>
     </div>    
 
     <!-- 傳統服務包區塊 -->

@@ -3,6 +3,7 @@ import * as memberPackageService from '../services/member-package.service';
 import { successResponse, errorResponse } from '../utils/response';
 
 import { ServiceLogService } from '../services/service_log.service';
+import { SignatureService } from '../services/signature.service';
 const serviceLogService = new ServiceLogService();
 
 const getParamId = (param: string | string[]): string => {
@@ -82,16 +83,43 @@ export const useService = async (req: Request, res: Response) => {
     if (!member_package_id || !selected_service_ids || !selected_service_ids.length) {
       return res.status(400).json(errorResponse('缺少必要欄位 (member_package_id, selected_service_ids)', 400));
     }
+
+    // ---------- 處理簽名：base64 → 上傳 Supabase → URL ----------
+    let finalSignatureUrl: string | undefined = signature_url;
+
+    if (signature_url && signature_url.startsWith('data:image')) {
+      const matches = signature_url.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/);
+      if (matches) {
+        const ext = matches[1];
+        const base64Data = matches[2];
+        const buffer = Buffer.from(base64Data, 'base64');
+
+        const fakeFile = {
+          buffer,
+          originalname: `package-signature.${ext}`,
+          mimetype: `image/${ext}`,
+        } as Express.Multer.File;
+
+        try {
+          finalSignatureUrl = await SignatureService.upload(fakeFile);
+        } catch (uploadErr) {
+          console.error('簽名上傳失敗', uploadErr);
+          throw new Error('簽名上傳失敗');
+        }
+      }
+    }
+
     const created_by = (req as any).user?.id;
     const usage = await memberPackageService.useService({
       member_package_id,
       selected_service_ids,
       notes,
-      signature_url,
+      signature_url: finalSignatureUrl,   // ← 使用轉換後的 URL
       staff_id,
       created_by,
       gifts: gifts || [],
     });
+
     res.json(successResponse(usage));
   } catch (err: any) {
     console.error(err);

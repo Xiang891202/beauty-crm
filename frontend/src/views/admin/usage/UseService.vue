@@ -13,10 +13,10 @@
       </div>
 
       <!-- 备注 -->
-      <div class="form-group">
+      <!-- <div class="form-group">
         <label>備註</label>
         <textarea v-model="notes" rows="3" class="textarea" placeholder="可選"></textarea>
-      </div>
+      </div> -->
 
       <!-- 签名区域 – 灰色触发框 -->
       <div class="form-group">

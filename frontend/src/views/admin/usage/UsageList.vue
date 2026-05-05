@@ -32,8 +32,11 @@
             <div v-if="getGiftDescriptions(item).length" class="gift-items">
               🎁 贈品：{{ getGiftDescriptions(item).join('、') }}
             </div>
-            <div v-if="item.notes" class="card-notes">
-              📝 備註：{{ item.notes }}
+            <div class="card-notes">
+              📝 備註：
+              <span v-if="item.notes" class="notes-text">{{ item.notes }}</span>
+              <span v-else class="notes-empty">無</span>
+              <BaseButton size="sm" variant="outline" @click="openEditNotes(item)" style="font-size: 10px; background-color: #f0f0f0; color: black;">編輯</BaseButton>
             </div>
           </div>
           <div v-if="item.signature_url" class="card-signature">
@@ -48,6 +51,19 @@
       <span>第 {{ page }} 頁 / 共 {{ totalPages }} 頁</span>
       <BaseButton variant="outline" :disabled="page === totalPages" @click="page++">下一頁</BaseButton>
     </div>
+
+    <!-- 編輯備註彈窗 -->
+    <BaseModal v-model="showEditNotesModal" title="編輯備註">
+      <form @submit.prevent="saveNotes">
+        <div class="space-y-4">
+          <BaseTextarea v-model="editNotesForm.notes" label="備註" :rows="3" />
+          <div class="flex justify-end gap-3">
+            <BaseButton variant="outline" @click="showEditNotesModal = false">取消</BaseButton>
+            <BaseButton type="submit" :loading="notesSaving">儲存</BaseButton>
+          </div>
+        </div>
+      </form>
+    </BaseModal>
   </div>
 </template>
 
@@ -55,10 +71,13 @@
 import { ref, watch } from 'vue';
 import { getUsageList } from '@/api/modules/usage';
 import BaseButton from '@/components/common/BaseButton.vue';
+import BaseModal from '@/components/common/BaseModal.vue';
+import BaseTextarea from '@/components/common/BaseTextarea.vue';
+import http from '@/api/http';
 import { debounce } from 'lodash';
 
 interface UnifiedRecord {
-  id: string;
+  id: string;          // 例如 "trad_1", "pkg_100"
   type: 'traditional' | 'package' | 'gift';
   occurred_at: string;
   customer_name?: string;
@@ -74,13 +93,53 @@ const records = ref<UnifiedRecord[]>([]);
 const loading = ref(false);
 const error = ref('');
 
-const filters = ref({
-  customer_name: '',
-});
+const filters = ref({ customer_name: '' });
 const page = ref(1);
 const limit = 10;
 const totalPages = ref(1);
 
+// ---------- 備註編輯 ----------
+const showEditNotesModal = ref(false);
+const notesSaving = ref(false);
+const editNotesForm = ref({ id: '', notes: '' });
+
+const openEditNotes = (item: UnifiedRecord) => {
+  // 從 id 中提取實際的記錄 ID（去掉前綴）
+  const realId = item.id.startsWith('trad_')
+    ? item.id.replace('trad_', '')
+    : item.id.replace('pkg_', '');
+  editNotesForm.value = { id: realId, notes: item.notes || '' };
+  showEditNotesModal.value = true;
+};
+
+const saveNotes = async () => {
+  notesSaving.value = true;
+  try {
+    await http.patch(`/service-logs/${editNotesForm.value.id}/notes`, {
+      notes: editNotesForm.value.notes,
+    });
+    
+    // ＝＝＝ 不重新載入列表，直接更新本地資料 ＝＝＝
+    const updatedNotes = editNotesForm.value.notes;
+    const recordIndex = records.value.findIndex(r => {
+      const realId = r.id.startsWith('trad_')
+        ? r.id.replace('trad_', '')
+        : r.id.replace('pkg_', '');
+      return realId === editNotesForm.value.id;
+    });
+    if (recordIndex !== -1) {
+      records.value[recordIndex].notes = updatedNotes;
+    }
+    
+    showEditNotesModal.value = false;
+  } catch (err: any) {
+    alert(err?.response?.data?.error || '更新失敗');
+  } finally {
+    notesSaving.value = false;
+  }
+};
+
+// ---------- 其他輔助函數（保持原樣） ----------
 const typeLabel = (type: string) => {
   switch (type) {
     case 'traditional': return '📋 傳統服務';
@@ -92,25 +151,23 @@ const typeLabel = (type: string) => {
 
 const formatDateTime = (dateStr: string) => {
   if (!dateStr) return '-';
-  if (dateStr.length === 10 && /^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) return dateStr;
   return new Date(dateStr).toLocaleString('zh-TW', { hour12: false });
 };
 
 const openSignatureModal = (url: string) => {
-  if (!url) return
-  const w = window.open('', '_blank')
+  if (!url) return;
+  const w = window.open('', '_blank');
   if (w) {
     w.document.write(`
-      <html>
-        <head><title>簽名圖片</title></head>
-        <body style="margin:0; display:flex; justify-content:center; align-items:center; min-height:100vh; background:#fff;">
-          <img src="${url.replace(/"/g, '&quot;')}" style="max-width:100%; max-height:100%;" />
-        </body>
-      </html>
-    `)
-    w.document.close()
+      <html><head><title>簽名圖片</title></head>
+      <body style="margin:0;display:flex;justify-content:center;align-items:center;min-height:100vh;background:#fff;">
+        <img src="${url.replace(/"/g, '&quot;')}" style="max-width:100%;max-height:100%;" />
+      </body></html>
+    `);
+    w.document.close();
   }
-}
+};
 
 const getServiceNames = (item: UnifiedRecord) => {
   if (item.raw?.items && Array.isArray(item.raw.items)) {
@@ -123,12 +180,8 @@ const getServiceNames = (item: UnifiedRecord) => {
 };
 
 const getGiftDescriptions = (item: UnifiedRecord): string[] => {
-  if (item.gifts?.length) {
-    return item.gifts.map(g => g.gift_description);
-  }
-  if (item.raw?.gifts && Array.isArray(item.raw.gifts)) {
-    return item.raw.gifts.map((g: any) => g.gift_description);
-  }
+  if (item.gifts?.length) return item.gifts.map(g => g.gift_description);
+  if (item.raw?.gifts) return item.raw.gifts.map((g: any) => g.gift_description);
   const match = item.description.match(/；贈送禮品：(.+)$/);
   if (match) return match[1].split('、');
   return [];
@@ -136,45 +189,34 @@ const getGiftDescriptions = (item: UnifiedRecord): string[] => {
 
 const fetchLogs = async () => {
   loading.value = true;
-  error.value = '';
   try {
-    const params: any = {
-      page: page.value,
-      limit,
-      customer_name: filters.value.customer_name || undefined,
-    };
-    const res = await getUsageList(params);
+    const res = await getUsageList({ page: page.value, limit, customer_name: filters.value.customer_name || undefined });
     if (res.success && res.data) {
       records.value = res.data.items || [];
-      const total = res.data.total || 0;
-      totalPages.value = Math.ceil(total / limit);
+      totalPages.value = Math.ceil((res.data.total || 0) / limit);
     } else {
       records.value = [];
     }
   } catch (err: any) {
-    console.error(err);
     error.value = err?.response?.data?.error || '載入失敗';
-    records.value = [];
   } finally {
     loading.value = false;
   }
 };
 
 const resetFilters = () => {
-  filters.value = { customer_name: '' };
+  filters.value.customer_name = '';
   page.value = 1;
   fetchLogs();
 };
 
-const debouncedFetch = debounce(() => {
-  page.value = 1;
-  fetchLogs();
-}, 500);
-
+const debouncedFetch = debounce(() => { page.value = 1; fetchLogs(); }, 500);
 watch(() => filters.value.customer_name, () => debouncedFetch());
 watch(page, fetchLogs);
 fetchLogs();
 </script>
+
+<!-- 樣式保持原樣即可 -->
 
 <style scoped>
 /* 網格佈局：桌面三欄，手機一欄 */
@@ -323,5 +365,10 @@ fetchLogs();
   text-align: center;
   padding: 3rem;
   color: var(--text-light);
+}
+/* 防止儲存按鈕在 loading 時尺寸變化 */
+.base-button.loading {
+  min-width: 60px;        /* 設定固定最小寬度 */
+  padding: 0.5rem 1rem;   /* 與正常狀態一致 */
 }
 </style>

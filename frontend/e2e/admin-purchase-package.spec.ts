@@ -16,7 +16,6 @@ test.describe('購買組合包', () => {
     // === Mock 會員列表 ===
     await page.route('**/api/members*', (route) => {
       if (route.request().method() === 'GET') {
-        // 列表 or 單一會員
         if (route.request().url().includes('/members/1') && !route.request().url().includes('services')) {
           route.fulfill({
             status: 200,
@@ -95,11 +94,12 @@ test.describe('購買組合包', () => {
     // 輸入總次數
     await page.fill('input[type="number"]', '5');
 
-    // 使用 Promise.all 確保點擊與 dialog 事件同步
-    const [dialog] = await Promise.all([
-      page.waitForEvent('dialog', { timeout: 5000 }),
-      page.click('button[type="submit"]')
-    ]);
+    // 先註冊 dialog 事件
+    const dialogPromise = page.waitForEvent('dialog', { timeout: 5000 });
+    await page.click('button[type="submit"]');
+
+    // 馬上處理 dialog（先 accept，避免頁面跳轉後關閉）
+    const dialog = await dialogPromise;
     expect(dialog.message()).toContain('購買成功');
     await dialog.accept();
 

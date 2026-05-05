@@ -82,13 +82,30 @@ export const listUsages = async (req: Request, res: Response) => {
 
 export const updateUsageNotes = async (req: Request, res: Response) => {
   try {
-    const { id } = req.params;
+    const { id: rawId } = req.params;
+    const id = Array.isArray(rawId) ? rawId[0] : rawId; // 確保 id 是字串
     const { notes } = req.body;
-    const updated = await usageService.updateNotes(Number(id), notes);
-    res.json(successResponse(updated));
+
+    // 判斷 ID 是否為數字（傳統服務的 service_logs.id）
+    const numericId = Number(id);
+    if (!isNaN(numericId) && id.trim() !== '') {
+      // 傳統服務紀錄
+      const updated = await usageService.updateNotes(numericId, notes);
+      return res.json(successResponse(updated));
+    }
+
+    // 組合包紀錄：直接更新 Supabase service_usage_logs
+    const { supabase } = await import('../lib/supabase');
+    const { error } = await supabase
+      .from('service_usage_logs')
+      .update({ notes })
+      .eq('id', id);
+
+    if (error) throw new Error(error.message);
+
+    res.json(successResponse({ id, notes }));
   } catch (error: any) {
-    const status = error.status || 400;
-    res.status(status).json(errorResponse(error.message, status));
+    res.status(400).json(errorResponse(error.message, 400));
   }
 };
 

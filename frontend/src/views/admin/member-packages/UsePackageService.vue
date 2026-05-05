@@ -33,10 +33,10 @@
             <BaseButton type="button" variant="outline" size="sm" @click="addGift">+ 新增贈品</BaseButton>
         </div>
 
-        <div>
+        <!-- <div>
           <label class="block text-sm font-medium mb-1">備註</label>
           <textarea v-model="form.notes" class="w-full border rounded p-2" rows="2"></textarea>
-        </div>
+        </div> -->
 
         <div>
           <label class="block text-sm font-medium mb-1">簽名（必填）</label>

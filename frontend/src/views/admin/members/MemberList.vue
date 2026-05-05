@@ -20,9 +20,9 @@
           <td>{{ member.name }}</td>
           <td>{{ member.phone }}</td>
           <td>{{ member.birthday ? formatDate(member.birthday) : '-' }}</td>
-          <td>{{ member.email || '-' }}</td>
+          <!-- <td>{{ member.email || '-' }}</td> -->
           <td>
-            <router-link :to="`/admin/members/${member.id}`" class="btn btn-sm">查看詳情</router-link>
+            <router-link :to="`/admin/members/${member.id}`" class="btn btn-sm">詳情</router-link>
             <BaseButton class="btn btn-sm" @click="openEditDialog(member)">編輯</BaseButton>
           </td>
         </tr>

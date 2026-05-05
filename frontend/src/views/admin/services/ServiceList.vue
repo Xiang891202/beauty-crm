@@ -4,7 +4,7 @@
       <h2>課程品項</h2>
       <label class="checkbox-label">
         <input type="checkbox" v-model="showDeleted" @change="loadServices" />
-        顯示已刪除
+        顯示已下架
       </label>
       <button class="btn" @click="openForm()">新增課程</button>
     </div>
@@ -22,13 +22,13 @@
           <tr v-for="service in services" :key="service.id">
             <td>{{ service.name }}</td>
             <td>
-              <span v-if="service.deleted_at" class="deleted-badge">已刪除</span>
+              <span v-if="service.deleted_at" class="deleted-badge">已下架</span>
               <span v-else class="active-badge">正常</span>
             </td>
             <td>
               <template v-if="!service.deleted_at">
                 <button class="btn btn-sm" @click="openForm(service)">編輯</button>
-                <button class="btn btn-sm btn-outline" @click="softDelete(service.id)">軟刪除</button>
+                <button class="btn btn-sm btn-outline" @click="softDelete(service.id)">下架</button>
               </template>
               <template v-else>
                 <button class="btn btn-sm" @click="restoreService(service.id)">恢復</button>

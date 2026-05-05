@@ -2,7 +2,7 @@
 <template>
   <div class="full-signature-overlay">
     <div class="full-signature-content">
-      <h2 class="signature-title">請簽名</h2>
+      <!-- <h2 class="signature-title">請簽名</h2> -->
       <canvas ref="canvas" class="full-canvas" />
       <div class="full-signature-actions">
         <BaseButton @click="handleBack">回前頁</BaseButton>

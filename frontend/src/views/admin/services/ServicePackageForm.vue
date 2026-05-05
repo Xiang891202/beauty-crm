@@ -5,7 +5,7 @@
       <div class="bg-white rounded-lg shadow p-6 space-y-4">
         <BaseInput v-model="form.name" label="組合包名稱" required />
         <BaseTextarea v-model="form.description" label="描述" :rows="3" />
-        <BaseInput v-model.number="form.price" label="售價" type="number" step="0.01" required />
+        <!-- <BaseInput v-model.number="form.price" label="售價" type="number" step="0.01" required /> -->
         <!-- <BaseInput 
           :model-value="form.durationDaysDisplay === null ? '' : form.durationDaysDisplay"
           @update:model-value="handleDurationChange"

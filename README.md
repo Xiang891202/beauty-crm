@@ -48,7 +48,7 @@
 npm run test:all
 
 # 在 frontend 目錄
-npm test && npx playwright test
+npm test; npx playwright test
 CI/CD 自動化測試
 已整合 GitHub Actions，每次 push 到 main 或發送 Pull Request 時會自動執行後端測試 + 前端單元測試 + E2E 測試，確保每次更新安全。
 工作流程檔案：.github/workflows/test.yml

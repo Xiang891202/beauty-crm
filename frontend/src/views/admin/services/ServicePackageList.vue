@@ -14,7 +14,7 @@
         <thead>
           <tr>
             <th>名稱</th>
-            <th>售價</th>
+            <!-- <th>售價</th> -->
             <th>狀態</th>
             <th>操作</th>
           </tr>
@@ -22,7 +22,7 @@
         <tbody>
           <tr v-for="pkg in packages" :key="pkg.id">
             <td>{{ pkg.name }}</td>
-            <td>NT$ {{ pkg.price }}</td>
+            <!-- <td>NT$ {{ pkg.price }}</td> -->
             <td>
               <span v-if="pkg.deleted_at" class="deleted-badge">已下架</span>
               <span v-else :class="pkg.is_active ? 'active-badge' : 'inactive-badge'">
