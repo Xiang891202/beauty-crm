@@ -1,14 +1,14 @@
 <!-- frontend/src/views/admin/signature/FullSignature.vue -->
 <template>
-  <div class="full-signature-overlay">
-    <div class="full-signature-content">
-      <!-- <h2 class="signature-title">請簽名</h2> -->
-      <canvas ref="canvas" class="full-canvas" />
-      <div class="full-signature-actions">
-        <BaseButton @click="handleBack">回前頁</BaseButton>
-        <BaseButton @click="handleClear">清除</BaseButton>
-        <BaseButton @click="handleConfirm">確認</BaseButton>
-      </div>
+  <div class="full-signature-page">
+    <!-- 滿版 Canvas，扣除底部按鈕列的高度 -->
+    <canvas ref="canvas" class="full-canvas" />
+
+    <!-- 底部固定按鈕列 -->
+    <div class="full-signature-actions">
+      <BaseButton @click="handleBack">回前頁</BaseButton>
+      <BaseButton @click="handleClear">清除</BaseButton>
+      <BaseButton @click="handleConfirm">確認</BaseButton>
     </div>
   </div>
 </template>
@@ -26,17 +26,16 @@ const signatureStore = useSignatureStore()
 const canvas = ref<HTMLCanvasElement | null>(null)
 let pad: SignaturePadLib | null = null
 
-// 修正：動態設定 canvas 解析度等於實際顯示大小
+// 動態設定 canvas 像素尺寸 = 實際可視區域（扣掉底部按鈕高度）
 const resizeCanvas = () => {
   if (!canvas.value) return
-  const container = canvas.value.parentElement!
-  const rect = container.getBoundingClientRect()
-  // 設定 canvas 像素尺寸 = 容器寬度，高度按比例或最大 80vh
-  const w = rect.width
-  const h = Math.min(w * 0.6, window.innerHeight * 0.7)
+  const actionBar = document.querySelector('.full-signature-actions')
+  const actionHeight = actionBar ? actionBar.clientHeight : 60
+  const w = window.innerWidth
+  const h = window.innerHeight - actionHeight
   canvas.value.width = w
   canvas.value.height = h
-  // 若已有 pad 實例，直接更新；否則重新建立
+
   if (pad) {
     pad.clear()
   } else {
@@ -78,36 +77,35 @@ const handleBack = () => {
 </script>
 
 <style scoped>
-.full-signature-overlay {
+/* 全螢幕純白背景 */
+.full-signature-page {
   position: fixed;
   inset: 0;
-  background: rgba(0, 0, 0, 0.9);
+  background: #ffffff;
   z-index: 10000;
   display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.full-signature-content {
-  background: white;
-  padding: 1rem;
-  border-radius: 12px;
-  width: 96vw;
-  max-width: 900px;
-  display: flex;
   flex-direction: column;
-  align-items: center;
 }
+
+/* Canvas 佔滿整個可用空間 */
 .full-canvas {
-  /* 不要設定 width/height，讓像素屬性決定顯示大小 */
+  flex: 1;
   display: block;
-  max-width: 100%;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+  width: 100%;
+  height: 100%;
+  border: none;
   touch-action: none;
+  cursor: crosshair;
 }
+
+/* 底部按鈕列 */
 .full-signature-actions {
-  margin-top: 1rem;
   display: flex;
+  justify-content: center;
   gap: 1rem;
+  padding: 0.75rem;
+  background: #ffffff;
+  border-top: 1px solid #e0e0e0;
+  flex-shrink: 0;
 }
 </style>
