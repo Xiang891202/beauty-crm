@@ -47,7 +47,7 @@
 # 在 backend 目錄
 npm run test:all
 
-# 在 frontend 目錄
+# 在 frontend 目錄 (PowerShell)
 npm test; npx playwright test
 CI/CD 自動化測試
 已整合 GitHub Actions，每次 push 到 main 或發送 Pull Request 時會自動執行後端測試 + 前端單元測試 + E2E 測試，確保每次更新安全。
@@ -181,13 +181,15 @@ CI/CD 自動化測試流程 (GitHub Actions)
 
 簽名板滿版模式（含組合包與傳統服務）
 
+管理員使用紀錄備註編輯
+
+組合包簽名改存 URL（Supabase Storage）
+
 套餐過期自動判斷
 
 併發扣次防超扣
 
 客戶端自助查詢與使用服務
-
-管理員備註流程優化（簽名後一併送出、扣次、記錄）
 
 後端圖片壓縮（減少雲端儲存空間）
 
