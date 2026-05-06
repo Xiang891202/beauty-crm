@@ -9,6 +9,7 @@ import {
   updateUsageNotesSchema,
   listUsagesQuerySchema,
 } from '../validators/service_log.validator';
+import { idempotency } from '../middleware/idempotency.middleware';
 
 const router = Router();
 const upload = multer({ storage: multer.memoryStorage() });
@@ -21,6 +22,7 @@ router.get('/customers/me/service-logs', usageController.getMyServiceLogs);  // 
 // 創建使用記錄
 router.post(
   '/',
+  idempotency,
   roleMiddleware(['admin', 'staff']),
   upload.single('signature'),
   validate(createUsageSchema, 'body'),

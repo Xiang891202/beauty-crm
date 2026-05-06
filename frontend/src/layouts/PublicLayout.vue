@@ -11,6 +11,7 @@
           <template v-if="authStore.isLoggedIn && authStore.user?.role === 'customer'">
             <router-link to="/my-services" @click="closeMenu">我的療程包</router-link>
             <router-link to="/my-logs" @click="closeMenu">使用記錄</router-link>
+            <router-link to="/my-history" @click="closeMenu">歷史購買</router-link>
             <button class="logout-btn" @click="handleLogout">登出</button>
           </template>
           <template v-else>
@@ -30,6 +31,7 @@
         <template v-if="authStore.isLoggedIn && authStore.user?.role === 'customer'">
           <router-link to="/my-services" @click="closeMenu">我的療程包</router-link>
           <router-link to="/my-logs" @click="closeMenu">使用記錄</router-link>
+          <router-link to="/my-history" @click="closeMenu">歷史購買</router-link>
           <button class="logout-btn" @click="handleLogout">登出</button>
         </template>
         <template v-else>

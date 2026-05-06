@@ -1,6 +1,6 @@
 <template>
   <div class="my-logs">
-    <h2>服務使用紀錄</h2>
+    <h2 style="font-size: 1.5rem">課程使用紀錄</h2>
     <div v-if="loading" class="loading">載入中...</div>
     <div v-else-if="logs.length === 0" class="empty">尚無使用紀錄</div>
     <div v-else class="records-list">

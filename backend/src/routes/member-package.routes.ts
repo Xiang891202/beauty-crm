@@ -15,18 +15,21 @@ import {
   updateGift,         // 新增
   deleteGift,         // 新增
   redeemGift,
+  getMyUsedPackages,   // 新增
 } from '../controllers/member-package.controller';
+import { idempotency } from '../middleware/idempotency.middleware';
 
 const router = Router();
+// 客戶端歷史組合包
+router.get('/my/packages/used', authMiddleware, getMyUsedPackages);  
 router.use(authMiddleware, requireAdmin);
 router.post('/adjust', adjustRemaining);
 
 router.post('/purchase', purchasePackageForCustomer);
 router.get('/packages', getCustomerPackages);           // ?customer_id=1
 router.get('/packages/:id', getMemberPackageDetail);
-router.post('/use', useService);
+router.post('/use', idempotency, useService);
 router.get('/usage-logs', getUsageLogs);
-
 
 // 贈品管理
 router.get('/gifts/all', getAllGifts);           // 後台管理列表

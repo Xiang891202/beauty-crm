@@ -66,9 +66,44 @@ const handleConfirm = () => {
     alert('請先簽名')
     return
   }
-  const dataURL = pad.toDataURL()
-  signatureStore.completeSignature(dataURL)
-  router.back()
+
+  const originalDataURL = pad.toDataURL()
+  
+  // 將簽名轉為橫式（寬 > 高），讓它適合在記錄卡片的灰色底線上顯示
+  const img = new Image()
+  img.onload = () => {
+    const canvas = document.createElement('canvas')
+    const ctx = canvas.getContext('2d')!
+
+    // 如果圖片是直的（高 > 寬），旋轉 90 度
+    if (img.height > img.width) {
+      canvas.width = img.height
+      canvas.height = img.width
+      ctx.translate(canvas.width, 0)
+      ctx.rotate(Math.PI / 2) // 旋轉 90 度
+    } else {
+      canvas.width = img.width
+      canvas.height = img.height
+    }
+
+    ctx.drawImage(img, 0, 0, img.width, img.height)
+
+    // 限制最大寬度為 600px，保持比例
+    let finalWidth = canvas.width
+    let finalHeight = canvas.height
+    if (finalWidth > 600) {
+      finalHeight = (finalHeight * 600) / finalWidth
+      finalWidth = 600
+    }
+    canvas.width = finalWidth
+    canvas.height = finalHeight
+    ctx.drawImage(img, 0, 0, finalWidth, finalHeight)
+
+    const rotatedDataURL = canvas.toDataURL('image/png')
+    signatureStore.completeSignature(rotatedDataURL)
+    router.back()
+  }
+  img.src = originalDataURL
 }
 const handleBack = () => {
   signatureStore.cancelSignature()

@@ -1,5 +1,6 @@
 import axios, { type AxiosInstance, type AxiosRequestConfig, type AxiosResponse } from 'axios';
 import router from '@/router'
+import { v4 as uuidv4 } from 'uuid';
 
 // 自定義實例類型，將響應數據直接作為返回值（而不是 AxiosResponse）
 interface CustomAxiosInstance extends AxiosInstance {
@@ -22,6 +23,12 @@ const instance: AxiosInstance = axios.create({
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
   if (token) config.headers.Authorization = `Bearer ${token}`;
+  
+  // 對 POST / PATCH 請求加入 idempotency key
+  if (config.method === 'post' || config.method === 'patch') {
+    config.headers['X-Idempotency-Key'] = uuidv4();
+  }
+  
   return config;
 });
 

@@ -23,11 +23,15 @@ export const getMemberServicesByCustomer = async (req: Request, res: Response) =
 };
 
 //客戶取得客戶的服務授權
+// 修改 getMyMemberServices
 export const getMyMemberServices = async (req: Request, res: Response) => {
   try {
-    const customerId = (req as any).user.id; // 從 JWT 中獲取客戶 ID
+    const customerId = (req as any).user.id;
     const memberServices = await prisma.memberService.findMany({
-      where: { customer_id: customerId },
+      where: { 
+        customer_id: customerId,
+        remaining_sessions: { gt: 0 }  // ← 只顯示有剩餘次數的
+      },
       include: { service: true },
       orderBy: { created_at: 'desc' }
     });
@@ -35,6 +39,25 @@ export const getMyMemberServices = async (req: Request, res: Response) => {
   } catch (err) {
     console.error('Error in getMyMemberServices:', err);
     res.status(500).json(errorResponse('無法取得服務授權', 500));
+  }
+};
+
+// 客戶查看已用完的服務授權
+export const getMyUsedServices = async (req: Request, res: Response) => {
+  try {
+    const customerId = (req as any).user.id;
+    const memberServices = await prisma.memberService.findMany({
+      where: { 
+        customer_id: customerId,
+        remaining_sessions: 0  // 已用完
+      },
+      include: { service: true },
+      orderBy: { created_at: 'desc' }
+    });
+    res.json(successResponse(memberServices));
+  } catch (err) {
+    console.error('Error in getMyUsedServices:', err);
+    res.status(500).json(errorResponse('無法取得歷史服務', 500));
   }
 };
 

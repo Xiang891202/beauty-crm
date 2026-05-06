@@ -16,6 +16,7 @@
 
     <!-- 傳統服務包區塊 -->
     <h3 class="text-xl font-semibold mt-6 mb-3">傳統服務包</h3>
+    <div v-if="loadingServices" class="text-gray-400 text-sm py-2">更新中...</div>
     <ul class="service-list space-y-2" v-if="activeServices.length">
       <li v-for="ms in activeServices" :key="ms.id" class="border p-3 rounded flex justify-between items-center">
         <div>
@@ -32,6 +33,7 @@
 
     <!-- 組合包區塊 -->
     <h3 class="text-xl font-semibold mt-6 mb-3">組合包</h3>
+    <div v-if="loadingPackages" class="text-gray-400 text-sm py-2">更新中...</div>
     <div v-if="memberPackages.length" class="space-y-4">
       <div v-for="pkg in memberPackages" :key="pkg.id">
         <div class="flex justify-between items-start service-list space-y-2">
@@ -152,6 +154,10 @@ const selectedServiceId = ref<number | undefined>();
 const selectedMemberPackageId = ref<string>('');
 const selectedAdjustPackageId = ref<string>('');
 
+// 新增 loading 狀態
+const loadingServices = ref(false)
+const loadingPackages = ref(false)
+
 const loadMember = async () => {
   const id = Number(route.params.id);
   try {
@@ -164,29 +170,61 @@ const loadMember = async () => {
   }
 };
 
+// 修改 onPurchaseSuccess（傳統服務購買成功）
+const onPurchaseSuccess = (newService?: any) => {
+  showPurchaseModal.value = false
+  // 如果有新服務資料，直接插入本地列表
+  if (newService) {
+    memberServices.value.unshift(newService)
+  }
+  // 背景重新載入
+  loadServices()
+}
+
+// 修改 onPackageServiceUsed（組合包使用成功）
+const onPackageServiceUsed = () => {
+  showUsePackageModal.value = false
+  // 從本地列表更新剩餘次數
+  const pkg = memberPackages.value.find(p => p.id === selectedMemberPackageId.value)
+  if (pkg) {
+    pkg.remaining_uses -= 1
+    if (pkg.remaining_uses <= 0) {
+      memberPackages.value = memberPackages.value.filter(p => p.id !== selectedMemberPackageId.value)
+    }
+  }
+  loadMemberPackages() // 背景同步
+}
+
+// 加入重試機制
 const loadServices = async () => {
-  const id = Number(route.params.id);
+  loadingServices.value = true
+  const id = Number(route.params.id)
   try {
-    const res = await getMemberServices(id);
+    const res = await getMemberServices(id)
     if (res.success) {
-      memberServices.value = res.data;
+      memberServices.value = res.data
     }
   } catch (err) {
-    console.error('載入傳統服務包失敗', err);
+    console.error('載入傳統服務包失敗', err)
+  } finally {
+    loadingServices.value = false
   }
-};
+}
 
 const loadMemberPackages = async () => {
-  const id = Number(route.params.id);
+  loadingPackages.value = true
+  const id = Number(route.params.id)
   try {
-    const res = await getCustomerPackages(id);
+    const res = await getCustomerPackages(id)
     if (res.success) {
-      memberPackages.value = res.data;
+      memberPackages.value = res.data
     }
   } catch (err) {
-    console.error('載入組合包失敗', err);
+    console.error('載入組合包失敗', err)
+  } finally {
+    loadingPackages.value = false
   }
-};
+}
 
 const formatDate = (date: string) => {
   if (!date) return '';
@@ -202,16 +240,6 @@ const onServiceUsed = () => {
   showUseService.value = false;
   loadServices();
   selectedServiceId.value = undefined;
-};
-
-const onPurchaseSuccess = () => {
-  showPurchaseModal.value = false;
-  loadServices();
-};
-
-const onPackageServiceUsed = () => {
-  showUsePackageModal.value = false;
-  loadMemberPackages();
 };
 
 const onAdjustSuccess = () => {

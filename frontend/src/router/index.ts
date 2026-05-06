@@ -18,7 +18,7 @@ const Home = () => import('@/views/public/Home.vue');
 const CustomerLogin = () => import('@/views/public/CustomerLogin.vue');
 const MyServices = () => import('@/views/public/MyServices.vue');
 const MyServiceLogs = () => import('@/views/public/MyServiceLogs.vue');
-
+const MyHistory = () => import('@/views/public/MyHistory.vue');
 const routes = [
   {
     path: '/',
@@ -44,6 +44,12 @@ const routes = [
       { path: 'services', redirect: '/#services' },
       { path: 'products', redirect: '/#products' },
       { path: 'contact', redirect: '/#contact' },
+      {
+        path: 'my-history',
+        name: 'MyHistory',
+        component: () => import('@/views/public/MyHistory.vue'),
+        meta: { requiresAuth: true, role: 'customer' }
+      },
     ],
   },
   {

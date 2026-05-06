@@ -61,6 +61,21 @@ export const getMyPackages = async (req: Request, res: Response) => {
   }
 };
 
+// 客戶查詢已用完的組合包
+export const getMyUsedPackages = async (req: Request, res: Response) => {
+  try {
+    const customer_id = (req as any).user?.id;
+    if (!customer_id) {
+      return res.status(401).json(errorResponse('未授權', 401));
+    }
+    const packages = await memberPackageService.getCustomerUsedPackages(customer_id);
+    res.json(successResponse(packages));
+  } catch (err: any) {
+    console.error(err);
+    res.status(500).json(errorResponse(err.message || '查詢失敗', 500));
+  }
+};
+
 // 取得單一組合包詳細（含各服務剩餘次數）
 export const getMemberPackageDetail = async (req: Request, res: Response) => {
   try {

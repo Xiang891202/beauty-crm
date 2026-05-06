@@ -250,6 +250,50 @@ export const getUsageLogs = async (filter: { customer_id?: number; member_packag
   return data || [];
 };
 
+// 查詢客戶已用完的組合包（含品項快照）
+export const getCustomerUsedPackages = async (customer_id: number) => {
+  // 1. 查主記錄
+  const { data: packages, error } = await supabase
+    .from('member_service_packages')
+    .select('*')
+    .eq('customer_id', customer_id)
+    .eq('status', 'used_up')
+    .order('created_at', { ascending: false });
+
+  if (error) throw new Error(error.message);
+  if (!packages || packages.length === 0) return [];
+
+  // 2. 對每個組合包查快照品項
+  const result = await Promise.all(packages.map(async (pkg: any) => {
+    const { data: items } = await supabase
+      .from('member_service_package_items')
+      .select('service_id, original_quantity')
+      .eq('member_package_id', pkg.id);
+
+    if (!items || items.length === 0) return { ...pkg, snapshot_items: [] };
+
+    // 3. 批量獲取服務名稱
+    const serviceIds = items.map((item: any) => item.service_id);
+    const { data: services } = await supabase
+      .from('services')
+      .select('id, name')
+      .in('id', serviceIds);
+
+    const serviceMap: Record<number, string> = {};
+    (services || []).forEach((s: any) => { serviceMap[s.id] = s.name; });
+
+    const snapshot_items = items.map((item: any) => ({
+      service_id: item.service_id,
+      original_quantity: item.original_quantity,
+      service_name: serviceMap[item.service_id] || '未知服務',
+    }));
+
+    return { ...pkg, snapshot_items };
+  }));
+
+  return result;
+};
+
 // ==================== 人工補償：調整總剩餘次數 ====================
 // export const adjustRemaining = async (params: {
 //   member_package_id: string;

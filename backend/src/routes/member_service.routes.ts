@@ -10,6 +10,7 @@ router.use(authenticate);
 
 // 客戶查看自己的服務授權
 router.get('/customers/me/member-services', memberServiceController.getMyMemberServices);
+router.get('/customers/me/member-services/used', memberServiceController.getMyUsedServices);
 
 // 管理員查看客戶服務授權
 router.get('/customers/:customerId/member-services', roleMiddleware(['admin']), memberServiceController.getMemberServicesByCustomer);
