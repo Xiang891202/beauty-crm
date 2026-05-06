@@ -12,6 +12,7 @@
 - **Multer** – 檔案上傳
 - **Joi** – 請求驗證
 - **Jest** – 單元／整合測試
+- **冪等性 (Idempotency)** – 防止重複扣次
 
 ### 前端 (Frontend)
 - **Vue 3** + **TypeScript**
@@ -89,6 +90,48 @@ Components (Login, UsageList)	6	登入表單、使用紀錄列表渲染
 人工補償記錄查詢	篩選、列表正確顯示卡片
 傳統服務購買與使用	購買模態框、驗證下拉選單出現新方案、滿版簽名路由、modal 關閉驗證
 會員新增與編輯 (CRUD)	表單填寫與驗證、模態框開關、提交後列表刷新、alert 驗證
+核心功能
+管理員端
+會員管理（CRUD）
+
+課程管理（CRUD + 軟刪除）
+
+組合包管理（CRUD + 下架/恢復）
+
+購買組合包（含總次數設定）
+
+使用服務扣次（傳統服務 + 組合包）
+
+滿版簽名路由（直立自動轉橫式）
+
+人工補償記錄（調整次數）
+
+使用紀錄總覽（含備註編輯）
+
+儀表板統計
+
+贈品管理
+
+客戶端
+手機號碼 + 密碼登入
+
+查看療程包（只顯示有剩餘次數的）
+
+查看使用紀錄（含簽名圖片）
+
+歷史購買頁面（已用完的傳統服務包 + 組合包，含品項明細）
+
+聯絡我們（LINE 連結直達聊天室）
+
+安全性
+冪等性防重複扣次（Idempotency Key）
+
+JWT 身份驗證與角色權限控制
+
+輸入驗證（Joi）
+
+簽名圖片上傳 Supabase Storage（組合包自動轉 URL）
+
 快速開始
 1. 環境需求
 Node.js >= 18
@@ -115,12 +158,21 @@ npm install
 4. 資料庫遷移
 bash
 npx prisma migrate dev
-5. 啟動後端伺服器
+5. 建立冪等性記錄表
+在 Supabase SQL Editor 中執行：
+
+sql
+CREATE TABLE IF NOT EXISTS idempotency_records (
+  key VARCHAR(255) PRIMARY KEY,
+  response JSONB,
+  created_at TIMESTAMP DEFAULT NOW()
+);
+6. 啟動後端伺服器
 bash
 npm run dev:personal
 伺服器會啟動於 http://localhost:5001。
 
-6. 前端（獨立執行）
+7. 前端（獨立執行）
 bash
 cd ../frontend
 npm install
@@ -145,7 +197,7 @@ beauty-crm/
 │   │   ├── controllers/      # 請求處理
 │   │   ├── services/         # 商業邏輯
 │   │   ├── repositories/     # 資料存取層
-│   │   ├── middleware/       # 驗證、權限、上傳、錯誤處理
+│   │   ├── middleware/       # 驗證、權限、上傳、錯誤處理、冪等性
 │   │   ├── validators/       # Joi 輸入驗證
 │   │   ├── utils/            # 工具函數（JWT、回應格式、圖片上傳）
 │   │   └── types/            # TypeScript 型別定義
@@ -165,10 +217,13 @@ API 概覽
 /api/admin/member-packages/purchase	POST	為客戶購買組合包	管理員
 /api/admin/member-packages/use	POST	使用服務（扣次）	管理員
 /api/admin/member-packages/adjust	POST	調整剩餘次數	管理員
+/api/admin/member-packages/my/packages/used	GET	客戶查詢已用完的組合包	客戶
 /api/service-logs	GET	使用記錄（統合傳統與組合包）	登入
+/api/service-logs/:id/notes	PATCH	編輯備註	管理員
 /api/adjustments	GET	調整記錄列表	登入
 /api/admin/stats	GET	儀表板統計	管理員
 /api/public/auth/customer/login	POST	客戶登入	公開
+/api/member-services/customers/me/member-services/used	GET	客戶查詢已用完的傳統服務包	客戶
 …	…	…	…
 完整 API 文件請參考 docs/ 資料夾。
 
@@ -179,11 +234,17 @@ E2E 測試（Playwright）
 
 CI/CD 自動化測試流程 (GitHub Actions)
 
-簽名板滿版模式（含組合包與傳統服務）
+簽名板滿版模式（含組合包與傳統服務、直立自動轉橫式）
 
 管理員使用紀錄備註編輯
 
 組合包簽名改存 URL（Supabase Storage）
+
+冪等性防重複扣次（Idempotency Key）
+
+客戶端療程包過濾（只顯示有剩餘次數）
+
+客戶端歷史購買頁面（含品項明細）
 
 套餐過期自動判斷
 
@@ -192,6 +253,10 @@ CI/CD 自動化測試流程 (GitHub Actions)
 客戶端自助查詢與使用服務
 
 後端圖片壓縮（減少雲端儲存空間）
+
+輕量 DTO（後台 API 回應瘦身）
+
+CDN 加速（Vercel 部署）
 
 授權
 本專案為商業用途，未經授權不得任意散佈。
