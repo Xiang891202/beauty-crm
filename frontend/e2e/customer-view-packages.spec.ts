@@ -43,7 +43,7 @@ test.describe('客戶端', () => {
     await page.click('button:has-text("登入")');
 
     await expect(page).toHaveURL(/\/my-services/);
-    await expect(page.locator('h2')).toHaveText('我的服務');
+    await expect(page.locator('h2')).toHaveText('我的療程包');
     await expect(page.locator('text=美白組')).toBeVisible();
     await expect(page.locator('text=剩餘總次數：3')).toBeVisible();
   });
