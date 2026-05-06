@@ -206,6 +206,15 @@ beauty-crm/
 │   │   └── integration/      # 整合測試（routes）
 │   └── ...
 └── docs/                     # 文件（API 文件、ERD）
+
+doc文件:
+ERD.md：所有資料表結構與關聯
+
+api-spec.md：完整 API 規格（含權限、請求/回應格式）
+
+flow.md：管理員與客戶的業務操作流程
+
+
 API 概覽
 路徑	方法	說明	權限
 /api/auth/login	POST	管理員登入	公開
