@@ -2,19 +2,11 @@ name: Keep Render Alive
 
 on:
   schedule:
-    - cron: '*/5 * * * *'  # 每 5 分鐘執行一次
-  workflow_dispatch:  # ← 加入這行，允許手動觸發
-
+    - cron: '*/5 * * * *'
 
 jobs:
-  ping-personal:
+  ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render backend (personal)
+      - name: Ping Render
         run: curl -s https://beauty-crm-backend-personal.onrender.com/api/members
-
-#   ping-customer:
-#     runs-on: ubuntu-latest
-#     steps:
-#       - name: Ping Render backend (customer)
-#         run: curl -s https://beauty-crm-backend-customer.onrender.com/api/members
