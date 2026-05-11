@@ -4,41 +4,45 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL") //用於應用程式查詢
-  
+  url      = env("DATABASE_URL")
 }
 
 model Customer {
-  id              Int             @id @default(autoincrement())
-  name            String          @db.VarChar(100)
-  phone           String?         @unique(map: "idx_customers_phone") @db.VarChar(20)
-  email           String?         @db.VarChar(255)
-  birthday        DateTime?       @db.Date          // 只保留 birthday
-  address         String?
-  notes           String?                            // 描述欄位（後台隱藏）
-  created_at      DateTime?       @default(now()) @db.Timestamp(6)
-  updated_at      DateTime?       @default(now()) @db.Timestamp(6)
-  password_hash   String?         @db.VarChar(255)
-  adjustments     Adjustment[]
-  member_services MemberService[]
-  service_logs    ServiceLog[]
+  id                      Int                       @id @default(autoincrement())
+  name                    String                    @db.VarChar(100)
+  phone                   String?                   @unique(map: "idx_customers_phone") @db.VarChar(20)
+  email                   String?                   @db.VarChar(255)
+  birthday                DateTime?                 @db.Date
+  address                 String?
+  notes                   String?
+  created_at              DateTime?                 @default(now()) @db.Timestamp(6)
+  updated_at              DateTime?                 @default(now()) @db.Timestamp(6)
+  password_hash           String?                   @db.VarChar(255)
+  adjustments             Adjustment[]
+  member_service_packages member_service_packages[]
+  member_services         MemberService[]
+  service_logs            ServiceLog[]
+  service_usage_logs      service_usage_logs[]
 
   @@map("customers")
 }
 
 model Service {
-  id               Int             @id @default(autoincrement())
-  name             String          @db.VarChar(100)
-  description      String?
-  price            Decimal?        @db.Decimal(10, 2)
-  created_at       DateTime?       @default(now()) @db.Timestamp(6)
-  updated_at       DateTime?       @default(now()) @db.Timestamp(6)
-  duration_minutes Int             @default(60)
-  is_active        Boolean?        @default(true)
-  image_url        String?
-  deleted_at       DateTime?       @db.Timestamp(6)
-  member_services  MemberService[]
-  service_logs     ServiceLog[]
+  id                           Int                            @id @default(autoincrement())
+  name                         String                         @db.VarChar(100)
+  description                  String?
+  price                        Decimal?                       @db.Decimal(10, 2)
+  created_at                   DateTime?                      @default(now()) @db.Timestamp(6)
+  updated_at                   DateTime?                      @default(now()) @db.Timestamp(6)
+  duration_minutes             Int                            @default(60)
+  is_active                    Boolean?                       @default(true)
+  image_url                    String?
+  deleted_at                   DateTime?                      @db.Timestamp(6)
+  member_service_package_items member_service_package_items[]
+  member_services              MemberService[]
+  service_logs                 ServiceLog[]
+  service_package_items        service_package_items[]
+  service_usage_items          service_usage_items[]
 
   @@map("services")
 }
@@ -83,17 +87,20 @@ model ServiceLog {
 }
 
 model Adjustment {
-  id                Int            @id @default(autoincrement())
-  customer_id       Int?
-  member_service_id Int?
-  adjustment_type   String?        @db.VarChar(20)
-  amount            Int
-  reason            String?
-  created_at        DateTime?      @default(now()) @db.Timestamp(6)
-  created_by        Int?
-  users             users?         @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
-  customers         Customer?      @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
-  member_service    MemberService? @relation(fields: [member_service_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  id                    Int            @id @default(autoincrement())
+  customer_id           Int?
+  member_service_id     Int?
+  adjustment_type       String?        @db.VarChar(20)
+  amount                Int
+  reason                String?
+  created_at            DateTime?      @default(now()) @db.Timestamp(6)
+  created_by            Int?
+  member_package_id     String?        @db.Uuid
+  package_snapshot_name String?        @db.VarChar
+  notes                 String?
+  users                 users?         @relation(fields: [created_by], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  customers             Customer?      @relation(fields: [customer_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
+  member_service        MemberService? @relation(fields: [member_service_id], references: [id], onDelete: Cascade, onUpdate: NoAction)
 
   @@map("adjustments")
 }
@@ -120,4 +127,112 @@ model users {
   updated_at    DateTime?    @default(now()) @db.Timestamp(6)
   adjustments   Adjustment[]
   service_logs  ServiceLog[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model idempotency_records {
+  key        String    @id @db.VarChar(255)
+  response   Json?
+  created_at DateTime? @default(now()) @db.Timestamp(6)
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model member_service_package_items {
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_package_id       String?                  @db.Uuid
+  service_id              Int?
+  original_quantity       Int?
+  remaining_quantity      Int?
+  created_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  member_service_packages member_service_packages? @relation(fields: [member_package_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_member_pkg_items_member_pkg")
+  services                Service?                 @relation(fields: [service_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_member_pkg_items_service")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model member_service_packages {
+  id                           String                         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id                  Int?
+  package_id                   String?                        @db.Uuid
+  snapshot_name                String?                        @db.VarChar
+  snapshot_description         String?
+  purchase_date                DateTime?                      @db.Date
+  expiry_date                  DateTime?                      @db.Date
+  total_uses                   Int?
+  remaining_uses               Int?
+  status                       String?                        @default("active") @db.VarChar
+  created_at                   DateTime?                      @default(now()) @db.Timestamptz(6)
+  updated_at                   DateTime?                      @default(now()) @db.Timestamptz(6)
+  member_service_package_items member_service_package_items[]
+  customers                    Customer?                      @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_member_packages_customer")
+  service_packages             service_packages?              @relation(fields: [package_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_member_packages_package")
+  package_gifts                package_gifts[]
+  service_usage_logs           service_usage_logs[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model package_gifts {
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_package_id       String?                  @db.Uuid
+  gift_description        String?
+  notes                   String?
+  is_redeemed             Boolean?                 @default(false)
+  redeemed_at             DateTime?                @db.Timestamptz(6)
+  service_usage_log_id    String?                  @db.Uuid
+  created_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  member_service_packages member_service_packages? @relation(fields: [member_package_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_gifts_member_pkg")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_package_items {
+  id               String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  package_id       String?           @db.Uuid
+  service_id       Int?
+  quantity         Int
+  created_at       DateTime?         @default(now()) @db.Timestamptz(6)
+  service_packages service_packages? @relation(fields: [package_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_service_package_items_package")
+  services         Service?          @relation(fields: [service_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_service_package_items_service")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_packages {
+  id                      String                    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                    String                    @db.VarChar
+  description             String?
+  price                   Decimal?                  @default(0) @db.Decimal
+  duration_days           Int?
+  is_active               Boolean?                  @default(true)
+  deleted_at              DateTime?                 @db.Timestamptz(6)
+  created_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  updated_at              DateTime?                 @default(now()) @db.Timestamptz(6)
+  member_service_packages member_service_packages[]
+  service_package_items   service_package_items[]
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_usage_items {
+  id                 String              @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  usage_log_id       String?             @db.Uuid
+  service_id         Int?
+  service_usage_logs service_usage_logs? @relation(fields: [usage_log_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usage_items_log")
+  services           Service?            @relation(fields: [service_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usage_items_service")
+}
+
+/// This model contains row level security and requires additional setup for migrations. Visit https://pris.ly/d/row-level-security for more info.
+model service_usage_logs {
+  id                      String                   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  customer_id             Int?
+  member_package_id       String?                  @db.Uuid
+  service_id              Int?
+  usage_date              DateTime?                @default(now()) @db.Timestamptz(6)
+  quantity                Int?                     @default(1)
+  notes                   String?
+  signature_url           String?
+  staff_id                Int?
+  created_by              Int?
+  created_at              DateTime?                @default(now()) @db.Timestamptz(6)
+  snapshot_package_name   String?                  @db.VarChar
+  selected_service_ids    Json?
+  service_usage_items     service_usage_items[]
+  customers               Customer?                @relation(fields: [customer_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usage_logs_customer")
+  member_service_packages member_service_packages? @relation(fields: [member_package_id], references: [id], onDelete: NoAction, onUpdate: NoAction, map: "fk_usage_logs_member_pkg")
 }
