@@ -4,6 +4,7 @@ import { successResponse, errorResponse } from '../utils/response';
 import { customerLoginSchema } from '../validators/auth.validator';
 import { validate } from '../middleware/validate.middleware';
 import { generateToken } from '../utils/jwt'
+import { login as authLogin } from '../services/auth.service';
 import { ApiError } from '../types/errors';
 // import '../types/express.d.ts'; // 确保全局类型扩展被加载
 
@@ -32,16 +33,27 @@ const authService = new AuthService();
 
 //硬編碼認證 測試登入接口返回 token 值
 
+// export const login = async (req: Request, res: Response) => {
+//   const { email, password } = req.body;
+
+//   // 临时硬编码验证（测试用）
+//   // if (email === 'test@gmail.com' && password === '123456') {
+//   //   const token = generateToken({ id: 1, email, role: 'admin' });
+//   //   return res.json(successResponse({ token, user: { id: 1, email, role: 'admin' } }));
+//   // }
+
+//   return res.status(401).json(errorResponse('Invalid credentials', 401));
+// };
+
 export const login = async (req: Request, res: Response) => {
-  const { email, password } = req.body;
-
-  // 临时硬编码验证（测试用）
-  if (email === 'test@gmail.com' && password === '123456') {
-    const token = generateToken({ id: 1, email, role: 'admin' });
-    return res.json(successResponse({ token, user: { id: 1, email, role: 'admin' } }));
+  try {
+    const { email, password } = req.body;
+    const result = await authLogin(email, password);
+    res.json(successResponse(result));
+  } catch (err: any) {
+    const status = err.status || 401;
+    res.status(status).json(errorResponse(err.message, status));
   }
-
-  return res.status(401).json(errorResponse('Invalid credentials', 401));
 };
 
 // register 可以暂时返回提示或简单实现

@@ -34,6 +34,10 @@ export const addMember = async (data: any) => {
     data.password_hash = await bcrypt.hash(data.password, 10);
     delete data.password;
   }
+  // 把生日從日期字串補成完整的 DateTime
+  if (data.birthday) {
+    data.birthday = new Date(data.birthday + 'T00:00:00.000Z');
+  }
   return await prisma.customer.create({ data });
 };
 

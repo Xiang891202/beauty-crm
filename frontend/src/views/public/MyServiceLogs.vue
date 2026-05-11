@@ -24,7 +24,9 @@
             </div> -->
           </div>
           <div v-if="item.signature_url" class="card-signature">
-            <img :src="item.signature_url" alt="簽名" @click="openSignatureModal(item.signature_url)" />
+            <img :src="item.signature_url" alt="簽名" 
+              <!-- @click="openSignatureModal(item.signature_url)" -->
+            />
           </div>
         </div>
       </div>

@@ -198,7 +198,12 @@ const submitAdjustment = async () => {
 
 const formatDate = (dateStr: string) => {
   if (!dateStr) return '-';
-  return new Date(dateStr).toLocaleString('zh-TW', { hour12: false });
+  // 兼容处理：如果字符串没有 "Z" 结尾，补齐 "Z" 使其成为标准 UTC 时间
+  const isoStr = dateStr.endsWith('Z') ? dateStr : dateStr + 'Z';
+  return new Date(isoStr).toLocaleString('zh-TW', {
+    timeZone: 'Asia/Taipei',
+    hour12: false,
+  });
 };
 
 const openSignatureModal = (url: string) => {

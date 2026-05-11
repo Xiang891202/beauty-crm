@@ -12,6 +12,7 @@ export const createAdjustmentSchema = Joi.object({
 export const listAdjustmentsQuerySchema = Joi.object({
   usageId: Joi.number().integer().positive().optional(),
   customer_id: Joi.number().integer().positive().optional(),
+  customer_name: Joi.string().optional(), // ← 新增這行
   member_service_id: Joi.number().integer().positive().optional(),
   adjustment_type: Joi.string().valid('INCREASE', 'DECREASE').optional(),
   startDate: Joi.date().iso().optional(),

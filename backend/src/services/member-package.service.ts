@@ -391,9 +391,10 @@ export const adjustRemaining = async (params: {
     reason: params.reason,
     notes: params.notes,
     created_by: params.created_by,
-    package_snapshot_name: memberPkg.snapshot_name,
-    customer_id: memberPkg.customer_id,
-    member_service_id: null,   // 傳統服務包留空
+    package_snapshot_name: memberPkg.snapshot_name,   // 务必包含
+    customer_id: memberPkg.customer_id,               // 👈 加上这行
+    member_service_id: null,
+    created_at: new Date().toISOString(), // 添加这一行
   });
   if (adjErr) {
     console.error('調整日誌寫入失敗:', adjErr);

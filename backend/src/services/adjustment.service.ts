@@ -46,13 +46,18 @@ export class AdjustmentService {
       });
 
       // 5. 创建调整记录
+      // 修改 createAdjustment 事务中的 adjustment create 部分
+      // 修改后：强制传入 UTC 时间
+      const utcNow = new Date().toISOString();
       const adjustment = await tx.adjustment.create({
         data: {
           member_service_id: data.member_service_id!,
-          adjustment_type: data.adjustment_type as 'INCREASE' | 'DECREASE', // 显式类型断言
+          customer_id: memberService.customer_id,
+          adjustment_type: data.adjustment_type as 'INCREASE' | 'DECREASE',
           amount: data.amount,
           reason: data.reason ?? null,
           created_by: data.created_by ?? null,
+          created_at: new Date().toISOString(), // 显式添加UTC时间
         },
       });
 
@@ -70,7 +75,7 @@ export class AdjustmentService {
   }
 
   async list(params: {
-    customer_name?: string; // ✅ 新增
+    customer_name?: string;
     member_service_id?: number;
     member_package_id?: string;
     adjustment_type?: 'INCREASE' | 'DECREASE';
@@ -95,9 +100,33 @@ export class AdjustmentService {
     if (adjustment_type) query = query.eq('adjustment_type', adjustment_type);
     if (endDate) query = query.lte('created_at', endDate.toISOString());
 
-    // 預設不篩選 member_service_id 或 member_package_id，讓兩者都出現
+    // 客戶姓名篩選：需要先查符合姓名的客戶 ID
+    if (customer_name) {
+      const { data: customers } = await supabase
+        .from('customers')
+        .select('id')
+        .ilike('name', `%${customer_name}%`);
+      const customerIds = customers?.map(c => c.id) || [];
+      if (customerIds.length > 0) {
+        query = query.in('customer_id', customerIds);
+      } else {
+        return { items: [], total: 0, page, limit };
+      }
+    }
+
     const { data, error, count } = await query;
     if (error) throw new Error(error.message);
+
+    // 將每筆記錄的 created_at 轉為台灣時間字串
+    // const items = (data || []).map(adj => ({
+    //   ...adj,
+    //   created_at: adj.created_at
+    //     ? new Date(adj.created_at).toLocaleString('zh-TW', {
+    //         timeZone: 'Asia/Taipei',
+    //         hour12: false,
+    //       })
+    //     : null,
+    // }));
 
     return {
       items: data || [],

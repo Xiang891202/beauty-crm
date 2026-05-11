@@ -1,2 +1,0 @@
-﻿# prisma migrate dev
-provider = "postgresql"

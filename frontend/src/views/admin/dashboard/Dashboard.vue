@@ -14,7 +14,7 @@
             <th>服務名稱</th>
             <th>使用時間</th>
             <th>備註</th>
-            <th>簽名</th>
+            <!-- <th>簽名</th> -->
            </tr>
         </thead>
         <tbody>
@@ -23,7 +23,7 @@
              <td>{{ log.serviceName }}</td>
              <td>{{ formatDate(log.usedAt) }}</td>
              <td>{{ log.note }}</td>
-             <td><img v-if="log.signatureImage" :src="log.signatureImage" width="50" /></td>
+             <!-- <td><img v-if="log.signatureImage" :src="log.signatureImage" width="50" /></td> -->
            </tr>
         </tbody>
       </table>
@@ -45,7 +45,13 @@ const initChart = () => {
     const chart = echarts.init(chartRef.value);
     chart.setOption({
       xAxis: { type: 'category', data: stats.value.dailyUsage.map(d => d.date) },
-      yAxis: { type: 'value' },
+      yAxis: {
+        type: 'value',
+        minInterval: 1,   // ← 加上這行，確保 Y 軸只顯示整數
+        axisLabel: {
+          formatter: (val: number) => Math.round(val).toString()
+        }
+      },
       series: [{ type: 'line', data: stats.value.dailyUsage.map(d => d.count) }]
     });
   }

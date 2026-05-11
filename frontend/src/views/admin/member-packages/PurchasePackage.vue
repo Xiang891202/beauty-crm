@@ -29,9 +29,8 @@
         <div v-if="selectedPackage" class="bg-gray-50 p-3 rounded">
           <p class="font-medium">組合包內容：</p>
           <ul class="list-disc list-inside text-sm">
-            <li v-for="item in selectedPackage.items" :key="item.service!.id">
-              {{ item.service!.name }} 
-              <!-- x {{ item.quantity }} 次 -->
+            <li v-for="(item, idx) in selectedPackage.items" :key="item.service?.id ?? item.service_id ?? idx">
+              {{ item.service?.name || `服務 #${item.service_id}` }}
             </li>
           </ul>
           <!-- <p class="text-sm mt-2">有效天數：{{ selectedPackage.duration_days ? selectedPackage.duration_days + ' 天' : '無限期' }}</p> -->

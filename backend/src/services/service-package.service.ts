@@ -40,46 +40,85 @@ export const createPackage = async (data: CreatePackageInput) => {
 };
 
 export const getPackages = async (filter?: { is_active?: boolean; include_deleted?: boolean }) => {
-  let query = supabase
-    .from('service_packages')
-    .select(`
-      *,
-      items:service_package_items(
-        id,
-        quantity,
-        service:services(id, name)
-      )
-    `);
-
-  if (filter?.is_active !== undefined) {
-    query = query.eq('is_active', filter.is_active);
-  }
-
-  // 軟刪除過濾：若 include_deleted 為 false 或未提供，則只顯示 deleted_at 為 null 的記錄
-  if (!filter?.include_deleted) {
-    query = query.is('deleted_at', null);
-  }
-
-  const { data, error } = await query.order('created_at', { ascending: false });
+  let query = supabase.from('service_packages').select('*');
+  if (filter?.is_active !== undefined) query = query.eq('is_active', filter.is_active);
+  if (!filter?.include_deleted) query = query.is('deleted_at', null);
+  const { data: packages, error } = await query.order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
-  return data || [];
+  if (!packages) return [];
+
+  // 1. 获取所有 package 的 id
+  const packageIds = packages.map(p => p.id);
+  if (packageIds.length === 0) return [];
+
+  // 2. 获取所有相关的 items
+  const { data: allItems } = await supabase
+    .from('service_package_items')
+    .select('id, quantity, service_id, package_id')
+    .in('package_id', packageIds);
+
+  // 3. 收集所有 service_id
+  const serviceIds = [...new Set((allItems || []).map(i => i.service_id))];
+
+  // 4. 批量获取 services
+  const { data: services } = await supabase
+    .from('services')
+    .select('id, name')
+    .in('id', serviceIds);
+
+  const serviceMap: Record<number, any> = {};
+  services?.forEach(s => { serviceMap[s.id] = s; });
+
+  // 5. 组装
+  const itemsByPackage: Record<string, any[]> = {};
+  (allItems || []).forEach(item => {
+    if (!itemsByPackage[item.package_id]) itemsByPackage[item.package_id] = [];
+    itemsByPackage[item.package_id].push({
+      ...item,
+      service: serviceMap[item.service_id] || null,
+    });
+  });
+
+  return packages.map(pkg => ({
+    ...pkg,
+    items: itemsByPackage[pkg.id] || []
+  }));
 };
 
 export const getPackageById = async (id: string) => {
-  const { data, error } = await supabase
+  const { data: pkg, error: pkgError } = await supabase
     .from('service_packages')
-    .select(`
-      *,
-      items:service_package_items(
-        id,
-        quantity,
-        service:services(id, name)
-      )
-    `)
+    .select('*')
     .eq('id', id)
     .single();
-  if (error) throw new Error(error.message);
-  return data;
+  if (pkgError) throw new Error(pkgError.message);
+  if (!pkg) throw new Error('組合包不存在');
+
+  const { data: items, error: itemsError } = await supabase
+    .from('service_package_items')
+    .select('id, quantity, service_id')
+    .eq('package_id', id)
+    .order('id'); // 確保排序一致
+
+  if (itemsError) throw new Error(itemsError.message);
+
+  // 手動附加服務資訊
+  const serviceIds = [...new Set(items?.map(i => i.service_id) || [])];
+  let serviceMap: Record<number, any> = {};
+  if (serviceIds.length > 0) {
+    const { data: services } = await supabase
+      .from('services')
+      .select('id, name')
+      .in('id', serviceIds);
+    services?.forEach(s => { serviceMap[s.id] = s; });
+  }
+
+  const itemsWithService = (items || []).map(item => ({
+    ...item,
+    service: serviceMap[item.service_id] || null,
+  }));
+
+  return { ...pkg, items: itemsWithService };
 };
 
 export const updatePackage = async (id: string, data: any) => {
