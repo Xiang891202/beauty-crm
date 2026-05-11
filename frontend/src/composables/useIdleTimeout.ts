@@ -7,8 +7,8 @@ const LOGOUT_COUNTDOWN = 10;
 
 export function useIdleTimeout() {
   const router = useRouter();
-  let idleTimer: number | null = null;
-  let countdownTimer: number | null = null;
+  let idleTimer: ReturnType<typeof setTimeout> | null = null;
+  let countdownTimer: ReturnType<typeof setTimeout> | null = null;
   let overlayDiv: HTMLDivElement | null = null;
   let isMonitoring = false; // 避免重复添加事件
 
