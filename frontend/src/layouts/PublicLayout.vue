@@ -97,13 +97,11 @@ const scrollToElement = (sectionId: string) => {
 };
 
 const handleLogout = () => {
-  // 清除 Pinia store 中的 token 和 user（核心！）
   authStore.logout();
-  // 也可以保留下面两行作为双保险，但调用 authStore.logout() 已足够
-  localStorage.removeItem('token');
-  localStorage.removeItem('user');
-  router.push('/customer/login');
-  closeMenu();
+  // 确保状态变更在跳转前被 Vue 处理
+  router.push('/customer/login').then(() => {
+    closeMenu();
+  });
 };
 
 // 路由变化时关闭菜单
