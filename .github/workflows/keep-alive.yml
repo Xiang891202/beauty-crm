@@ -8,5 +8,7 @@ jobs:
   ping:
     runs-on: ubuntu-latest
     steps:
-      - name: Ping Render
+      - name: Ping Personal
         run: curl -s https://beauty-crm-backend-personal.onrender.com/api/members
+      - name: Ping Customer
+        run: curl -s https://beauty-crm-backend-customer.onrender.com/api/members
