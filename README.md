@@ -1,6 +1,6 @@
 # 💄 Beauty CRM
 
-美容產業客戶關係管理系統，提供客戶管理、服務項目、組合套餐購買與使用扣次、簽名板、後台儀表板等功能。
+美容產業客戶關係管理系統，提供客戶管理、服務項目、組合套餐購買與使用扣次、簽名板、後台儀表板等功能，**已完整支援多租戶（Multi-Tenant）隔離架構**。
 
 ## 技術棧
 
@@ -21,6 +21,20 @@
 - **Axios**
 - **Vitest** – 單元測試
 - **Playwright** – 端對端 (E2E) 測試
+
+---
+
+## 多租戶架構（Multi-Tenant）
+
+所有業務資料表均包含 `tenant_id` 欄位，透過 **`tenantContext` 中介層** 自動注入當前請求的租戶 ID，達到不同商家資料完全隔離。
+
+- **管理員 (admin)**：不受租戶限制，可跨商家操作（`tenantContext` 自動豁免）。
+- **一般後台使用者**：從 `users` 表取得 `tenant_id`。
+- **客戶 (customer)**：從 `customers` 表取得 `tenant_id`。
+- **環境變數 `MULTI_TENANT`**：設為 `true` 時啟用租戶隔離；`false` 則完全略過（單一租戶模式）。
+- **`tenants` 表**：僅存在於特定環境，由開發者手動管理，Prisma 設為 `@@ignore` 不會被更動。
+
+> ⚠️ 分層後所有 API 請求都必須先經過 `authenticate`（JWT 驗證）再進入 `tenantContext`，順序已在路由統一處理，避免因中間件順序錯誤導致 401。
 
 ---
 
@@ -112,10 +126,12 @@ Components (Login, UsageList)	6	登入表單、使用紀錄列表渲染
 
 贈品管理
 
+多租戶隔離（自動根據登入者取得所屬商家資料）
+
 客戶端
 手機號碼 + 密碼登入
 
-查看療程包（只顯示有剩餘次數的）
+查看療程包（只顯示有剩餘次數的，並自動限縮於所屬 tenant）
 
 查看使用紀錄（含簽名圖片）
 
@@ -124,6 +140,8 @@ Components (Login, UsageList)	6	登入表單、使用紀錄列表渲染
 聯絡我們（LINE 連結直達聊天室）
 
 安全性
+多租戶資料隔離（tenantContext 中介層）
+
 冪等性防重複扣次（Idempotency Key）
 
 JWT 身份驗證與角色權限控制
@@ -131,6 +149,8 @@ JWT 身份驗證與角色權限控制
 輸入驗證（Joi）
 
 簽名圖片上傳 Supabase Storage（組合包自動轉 URL）
+
+middleware 執行順序嚴格控管（authenticate → tenantContext → roleMiddleware）
 
 快速開始
 1. 環境需求
@@ -141,7 +161,8 @@ PostgreSQL 資料庫
 Supabase 帳號與專案（用於圖片儲存）
 
 2. 環境變數設定
-在 backend/ 下建立 .env 檔案（可參考 .env.example）：
+專案支援多環境（如 personal、customer），每個環境有自己的 .env 檔案（如 .env.personal、.env.customer）。
+範例 .env.personal：
 
 env
 DATABASE_URL="postgresql://..."
@@ -151,13 +172,18 @@ SUPABASE_ANON_KEY="anon-key"
 SUPABASE_SERVICE_KEY="service-key"
 SUPABASE_BUCKET="signatures"
 PORT=5001
+MULTI_TENANT=true   # 啟用多租戶隔離
+
+⚠️ .env.* 皆已加入 .gitignore，不會被提交。
+
 3. 安裝相依套件
 bash
 cd backend
 npm install
 4. 資料庫遷移
 bash
-npx prisma migrate dev
+# 針對特定環境同步 Schema
+npx dotenv -e .env.personal -- npx prisma db push
 5. 建立冪等性記錄表
 在 Supabase SQL Editor 中執行：
 
@@ -169,8 +195,11 @@ CREATE TABLE IF NOT EXISTS idempotency_records (
 );
 6. 啟動後端伺服器
 bash
+# personal 環境
 npm run dev:personal
-伺服器會啟動於 http://localhost:5001。
+# customer 環境
+npm run dev:customer
+伺服器會依據環境變數啟動於對應埠（預設 5001 / 5000）。
 
 7. 前端（獨立執行）
 bash
@@ -193,17 +222,17 @@ beauty-crm/
 ├── backend/                  # Express API 伺服器
 │   ├── src/
 │   │   ├── config/           # 環境變數、Prisma、Supabase、儲存桶
-│   │   ├── routes/           # 路由定義
+│   │   ├── routes/           # 路由定義 (已加入多租戶 middleware 組合)
 │   │   ├── controllers/      # 請求處理
 │   │   ├── services/         # 商業邏輯
 │   │   ├── repositories/     # 資料存取層
-│   │   ├── middleware/       # 驗證、權限、上傳、錯誤處理、冪等性
+│   │   ├── middleware/       # authenticate, tenantContext, role, upload, error…
 │   │   ├── validators/       # Joi 輸入驗證
-│   │   ├── utils/            # 工具函數（JWT、回應格式、圖片上傳）
+│   │   ├── utils/            # JWT、回應格式、圖片上傳
 │   │   └── types/            # TypeScript 型別定義
 │   ├── __tests__/            # 測試
-│   │   ├── unit/             # 單元測試（services, middleware, validators, utils）
-│   │   └── integration/      # 整合測試（routes）
+│   │   ├── unit/             # 單元測試
+│   │   └── integration/      # 整合測試
 │   └── ...
 └── docs/                     # 文件（API 文件、ERD）
 
@@ -219,10 +248,10 @@ API 概覽
 路徑	方法	說明	權限
 /api/auth/login	POST	管理員登入	公開
 /api/auth/profile	GET	取得當前使用者資訊	登入
-/api/members	GET	會員列表	公開
-/api/members	POST	新增會員	管理員
-/api/services	GET	服務列表	公開
-/api/service-packages	GET	組合包列表	登入
+/api/members	GET	會員列表（依 tenant 過濾）	登入
+/api/members	POST	新增會員（自動帶入 tenant_id）	管理員
+/api/services	GET	服務列表
+/api/service-packages	GET	組合包列表（依 tenant 過濾）	登入
 /api/admin/member-packages/purchase	POST	為客戶購買組合包	管理員
 /api/admin/member-packages/use	POST	使用服務（扣次）	管理員
 /api/admin/member-packages/adjust	POST	調整剩餘次數	管理員
@@ -230,11 +259,12 @@ API 概覽
 /api/service-logs	GET	使用記錄（統合傳統與組合包）	登入
 /api/service-logs/:id/notes	PATCH	編輯備註	管理員
 /api/adjustments	GET	調整記錄列表	登入
-/api/admin/stats	GET	儀表板統計	管理員
+/api/admin/stats	GET	儀表板統計（自動依 tenant 彙總）	管理員
 /api/public/auth/customer/login	POST	客戶登入	公開
 /api/member-services/customers/me/member-services/used	GET	客戶查詢已用完的傳統服務包	客戶
 …	…	…	…
-完整 API 文件請參考 docs/ 資料夾。
+
+> 所有受保護路由均經過 `authenticate` → `tenantContext` → 控制器，確保資料隔離與安全性。
 
 未來計畫
 前端單元測試（Vitest + Vue Test Utils）
