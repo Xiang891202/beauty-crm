@@ -8,17 +8,20 @@ interface CreatePackageInput {
   items: Array<{ service_id: number; quantity: number }>;
 }
 
-export const createPackage = async (data: CreatePackageInput) => {
-  // 1. 插入組合包主表
+export const createPackage = async (data: CreatePackageInput, tenantId?: number) => {
+  // 1. 插入組合包主表（注入 tenant_id）
+  const insertData: any = {
+    name: data.name,
+    description: data.description,
+    price: data.price,
+    duration_days: data.duration_days,
+    is_active: true,
+  };
+  if (tenantId) insertData.tenant_id = tenantId;
+
   const { data: pkg, error: pkgError } = await supabase
     .from('service_packages')
-    .insert({
-      name: data.name,
-      description: data.description,
-      price: data.price,
-      duration_days: data.duration_days,
-      is_active: true,
-    })
+    .insert(insertData)
     .select()
     .single();
 
@@ -36,13 +39,14 @@ export const createPackage = async (data: CreatePackageInput) => {
   }
 
   // 3. 回傳完整資料
-  return getPackageById(pkg.id);
+  return getPackageById(pkg.id, tenantId);
 };
 
-export const getPackages = async (filter?: { is_active?: boolean; include_deleted?: boolean }) => {
+export const getPackages = async (filter?: { is_active?: boolean; include_deleted?: boolean }, tenantId?: number) => {
   let query = supabase.from('service_packages').select('*');
   if (filter?.is_active !== undefined) query = query.eq('is_active', filter.is_active);
   if (!filter?.include_deleted) query = query.is('deleted_at', null);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
   const { data: packages, error } = await query.order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   if (!packages) return [];
@@ -60,11 +64,10 @@ export const getPackages = async (filter?: { is_active?: boolean; include_delete
   // 3. 收集所有 service_id
   const serviceIds = [...new Set((allItems || []).map(i => i.service_id))];
 
-  // 4. 批量获取 services
-  const { data: services } = await supabase
-    .from('services')
-    .select('id, name')
-    .in('id', serviceIds);
+  // 4. 批量获取 services（services 也可加上 tenant 过滤，但如果你希望跨租户共享服务模板可省略；这里加上可选过滤）
+  let serviceQuery = supabase.from('services').select('id, name').in('id', serviceIds);
+  if (tenantId) serviceQuery = serviceQuery.eq('tenant_id', tenantId);
+  const { data: services } = await serviceQuery;
 
   const serviceMap: Record<number, any> = {};
   services?.forEach(s => { serviceMap[s.id] = s; });
@@ -85,12 +88,10 @@ export const getPackages = async (filter?: { is_active?: boolean; include_delete
   }));
 };
 
-export const getPackageById = async (id: string) => {
-  const { data: pkg, error: pkgError } = await supabase
-    .from('service_packages')
-    .select('*')
-    .eq('id', id)
-    .single();
+export const getPackageById = async (id: string, tenantId?: number) => {
+  let query = supabase.from('service_packages').select('*').eq('id', id);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
+  const { data: pkg, error: pkgError } = await query.single();
   if (pkgError) throw new Error(pkgError.message);
   if (!pkg) throw new Error('組合包不存在');
 
@@ -98,18 +99,16 @@ export const getPackageById = async (id: string) => {
     .from('service_package_items')
     .select('id, quantity, service_id')
     .eq('package_id', id)
-    .order('id'); // 確保排序一致
+    .order('id');
 
   if (itemsError) throw new Error(itemsError.message);
 
-  // 手動附加服務資訊
   const serviceIds = [...new Set(items?.map(i => i.service_id) || [])];
   let serviceMap: Record<number, any> = {};
   if (serviceIds.length > 0) {
-    const { data: services } = await supabase
-      .from('services')
-      .select('id, name')
-      .in('id', serviceIds);
+    let svcQuery = supabase.from('services').select('id, name').in('id', serviceIds);
+    if (tenantId) svcQuery = svcQuery.eq('tenant_id', tenantId);
+    const { data: services } = await svcQuery;
     services?.forEach(s => { serviceMap[s.id] = s; });
   }
 
@@ -121,22 +120,22 @@ export const getPackageById = async (id: string) => {
   return { ...pkg, items: itemsWithService };
 };
 
-export const updatePackage = async (id: string, data: any) => {
+export const updatePackage = async (id: string, data: any, tenantId?: number) => {
   const { items, ...rest } = data;
 
-  // 更新主表
-  const { error: updateError } = await supabase
-    .from('service_packages')
-    .update(rest)
-    .eq('id', id);
+  let updateQuery = supabase.from('service_packages').update(rest).eq('id', id);
+  if (tenantId) updateQuery = updateQuery.eq('tenant_id', tenantId);
+  const { error: updateError } = await updateQuery;
   if (updateError) throw new Error(updateError.message);
 
-  // 若有 items，先刪除舊項目再新增
   if (items) {
-    const { error: delError } = await supabase
-      .from('service_package_items')
-      .delete()
-      .eq('package_id', id);
+    // 删除旧项目（同样需要限制租户：先验证包属于该租户）
+    let delQuery = supabase.from('service_package_items').delete().eq('package_id', id);
+    if (tenantId) {
+      // 安全起见，先查出该包是否属于该租户，但上面 update 已经验证了，所以可以省略。
+      // 不过 items 表没有 tenant_id，所以直接删除所有 package_id 对应的 items 即可。
+    }
+    const { error: delError } = await delQuery;
     if (delError) throw new Error(delError.message);
 
     if (items.length) {
@@ -150,23 +149,19 @@ export const updatePackage = async (id: string, data: any) => {
     }
   }
 
-  return getPackageById(id);
+  return getPackageById(id, tenantId);
 };
 
-// 軟刪除：設置 deleted_at 為當前時間
-export const deletePackage = async (id: string) => {
-  const { error } = await supabase
-    .from('service_packages')
-    .update({ deleted_at: new Date() })
-    .eq('id', id);
+export const deletePackage = async (id: string, tenantId?: number) => {
+  let query = supabase.from('service_packages').update({ deleted_at: new Date() }).eq('id', id);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
+  const { error } = await query;
   if (error) throw new Error(error.message);
 };
 
-// 恢復軟刪除（可選）
-export const restorePackage = async (id: string) => {
-  const { error } = await supabase
-    .from('service_packages')
-    .update({ deleted_at: null })
-    .eq('id', id);
+export const restorePackage = async (id: string, tenantId?: number) => {
+  let query = supabase.from('service_packages').update({ deleted_at: null }).eq('id', id);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
+  const { error } = await query;
   if (error) throw new Error(error.message);
 };

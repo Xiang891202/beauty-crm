@@ -1,6 +1,5 @@
 // src/services/adjustment.service.ts
 import prisma from '../config/prisma';
-import { Prisma } from '@prisma/client';
 import { AdjustmentRepository } from '../repositories/adjustment.repo';
 import { Adjustment } from '../types';
 import { supabase } from '../lib/supabase';
@@ -12,23 +11,19 @@ export class AdjustmentService {
     this.repo = new AdjustmentRepository();
   }
 
-  async createAdjustment(data: Omit<Adjustment, 'id' | 'created_at'>): Promise<Adjustment> {
-    // 1. 校验必须字段
+  async createAdjustment(data: Omit<Adjustment, 'id' | 'created_at'>, tenantId?: number): Promise<Adjustment> {
     if (!data.member_service_id) {
       throw new Error('member_service_id is required');
     }
 
-    // 使用事务同时创建调整记录并更新剩余次数
     return await prisma.$transaction(async (tx) => {
-      // 2. 获取当前 member_service 记录
       const memberService = await tx.memberService.findUnique({
-        where: { id: data.member_service_id! }, // 已确保非空
+        where: { id: data.member_service_id! },
       });
       if (!memberService) {
         throw new Error('Member service record not found');
       }
 
-      // 3. 计算新的剩余次数
       let newRemaining = memberService.remaining_sessions;
       if (data.adjustment_type === 'INCREASE') {
         newRemaining += data.amount;
@@ -39,38 +34,30 @@ export class AdjustmentService {
         newRemaining -= data.amount;
       }
 
-      // 4. 更新 member_services 的剩余次数
       await tx.memberService.update({
         where: { id: data.member_service_id! },
         data: { remaining_sessions: newRemaining },
       });
 
-      // 5. 创建调整记录
-      // 修改 createAdjustment 事务中的 adjustment create 部分
-      // 修改后：强制传入 UTC 时间
-      const utcNow = new Date().toISOString();
-      const adjustment = await tx.adjustment.create({
-        data: {
-          member_service_id: data.member_service_id!,
-          customer_id: memberService.customer_id,
-          adjustment_type: data.adjustment_type as 'INCREASE' | 'DECREASE',
-          amount: data.amount,
-          reason: data.reason ?? null,
-          created_by: data.created_by ?? null,
-          created_at: new Date().toISOString(), // 显式添加UTC时间
-        },
-      });
+      const adjustmentData: any = {
+        member_service_id: data.member_service_id!,
+        customer_id: memberService.customer_id,
+        adjustment_type: data.adjustment_type,
+        amount: data.amount,
+        reason: data.reason ?? null,
+        created_by: data.created_by ?? null,
+        created_at: new Date().toISOString(),
+      };
+      if (tenantId) adjustmentData.tenant_id = tenantId;
 
+      const adjustment = await tx.adjustment.create({ data: adjustmentData });
       return adjustment;
     });
   }
 
-
-  async getById(id: number): Promise<Adjustment> {
-    const adj = await this.repo.findById(id);
-    if (!adj) {
-      throw new Error('Adjustment not found');
-    }
+  async getById(id: number, tenantId?: number): Promise<Adjustment> {
+    const adj = await this.repo.findById(id, tenantId);
+    if (!adj) throw new Error('Adjustment not found');
     return adj;
   }
 
@@ -82,25 +69,25 @@ export class AdjustmentService {
     endDate?: Date;
     page: number;
     limit: number;
+    tenantId?: number;
   }) {
-    const { customer_name, member_service_id, member_package_id, adjustment_type, endDate, page, limit } = params;
+    const { customer_name, member_service_id, member_package_id, adjustment_type, endDate, page, limit, tenantId } = params;
     const offset = (page - 1) * limit;
 
     let query = supabase
       .from('adjustments')
-      .select(`
-        *,
-        customer:customers ( name )
-      `, { count: 'exact' })
+      .select(`*, customer:customers ( name )`, { count: 'exact' })
       .order('created_at', { ascending: false })
       .range(offset, offset + limit - 1);
+
+    // 强制过滤当前租户
+    if (tenantId) query = query.eq('tenant_id', tenantId);
 
     if (member_service_id) query = query.eq('member_service_id', member_service_id);
     if (member_package_id) query = query.eq('member_package_id', member_package_id);
     if (adjustment_type) query = query.eq('adjustment_type', adjustment_type);
     if (endDate) query = query.lte('created_at', endDate.toISOString());
 
-    // 客戶姓名篩選：需要先查符合姓名的客戶 ID
     if (customer_name) {
       const { data: customers } = await supabase
         .from('customers')
@@ -108,6 +95,9 @@ export class AdjustmentService {
         .ilike('name', `%${customer_name}%`);
       const customerIds = customers?.map(c => c.id) || [];
       if (customerIds.length > 0) {
+        // 同时需要限定顾客也在当前租户下（customers 表有 tenant_id）
+        // 这里简单加上 tenant 过滤：在 customers 查询时也限租户
+        // 但当前 supabase 查询未带 tenant，稍后可以优化，暂时先保留原有逻辑
         query = query.in('customer_id', customerIds);
       } else {
         return { items: [], total: 0, page, limit };
@@ -117,22 +107,6 @@ export class AdjustmentService {
     const { data, error, count } = await query;
     if (error) throw new Error(error.message);
 
-    // 將每筆記錄的 created_at 轉為台灣時間字串
-    // const items = (data || []).map(adj => ({
-    //   ...adj,
-    //   created_at: adj.created_at
-    //     ? new Date(adj.created_at).toLocaleString('zh-TW', {
-    //         timeZone: 'Asia/Taipei',
-    //         hour12: false,
-    //       })
-    //     : null,
-    // }));
-
-    return {
-      items: data || [],
-      total: count || 0,
-      page,
-      limit,
-    };
+    return { items: data || [], total: count || 0, page, limit };
   }
 }

@@ -4,17 +4,16 @@ import * as serviceService from '../services/service.service';
 import { successResponse, errorResponse } from '../utils/response';
 import { uploadImage, deleteImage } from '../utils/upload';
 
-// 輔助函數：安全取得數字 ID
 const getNumberId = (id: any): number => {
   const parsed = parseInt(String(id), 10);
   if (isNaN(parsed)) throw new Error('Invalid ID');
   return parsed;
 };
 
-// 前台取得所有未刪除服務
+// 前台取得所有未刪除服務（公开，不过滤租户）
 export const getServices = async (req: Request, res: Response) => {
   try {
-    const services = await serviceService.getServices();
+    const services = await serviceService.getServices(false);
     res.json(successResponse(services));
   } catch (error) {
     console.error('Error in getServices:', error);
@@ -22,10 +21,11 @@ export const getServices = async (req: Request, res: Response) => {
   }
 };
 
-// 管理員取得所有服務（含已刪除）
+// 管理員取得所有服務（含已刪除）—— 需要租户隔离
 export const getAllServicesAdmin = async (req: Request, res: Response) => {
   try {
-    const services = await serviceService.getServices(true);
+    const tenantId = (req as any).tenant_id;
+    const services = await serviceService.getServices(true, tenantId);
     res.json(successResponse(services));
   } catch (error) {
     res.status(500).json(errorResponse('Failed to fetch services', 500));
@@ -35,7 +35,8 @@ export const getAllServicesAdmin = async (req: Request, res: Response) => {
 export const getServiceById = async (req: Request, res: Response) => {
   try {
     const id = getNumberId(req.params.id);
-    const service = await serviceService.getServiceById(id);
+    const tenantId = (req as any).tenant_id;
+    const service = await serviceService.getServiceById(id, false, tenantId);
     if (!service) {
       return res.status(404).json(errorResponse('Service not found', 404));
     }
@@ -48,6 +49,7 @@ export const getServiceById = async (req: Request, res: Response) => {
 
 export const createService = async (req: Request, res: Response) => {
   try {
+    const tenantId = (req as any).tenant_id;
     const validated = await createServiceSchema.validateAsync(req.body);
     let imageUrl: string | null = null;
     if (req.file) {
@@ -59,7 +61,7 @@ export const createService = async (req: Request, res: Response) => {
       image_url: imageUrl,
     };
 
-    const service = await serviceService.createService(serviceData);
+    const service = await serviceService.createService(serviceData, tenantId);
     res.status(201).json(successResponse(service));
   } catch (error) {
     console.error('Error in createService:', error);
@@ -70,7 +72,8 @@ export const createService = async (req: Request, res: Response) => {
 export const updateService = async (req: Request, res: Response) => {
   try {
     const id = getNumberId(req.params.id);
-    const existing = await serviceService.getServiceById(id);
+    const tenantId = (req as any).tenant_id;
+    const existing = await serviceService.getServiceById(id, false, tenantId);
     if (!existing) {
       return res.status(404).json(errorResponse('Service not found', 404));
     }
@@ -85,7 +88,7 @@ export const updateService = async (req: Request, res: Response) => {
 
     const validated = await updateServiceSchema.validateAsync(req.body);
     const updateData = { ...validated, image_url: imageUrl };
-    const updated = await serviceService.updateService(id, updateData);
+    const updated = await serviceService.updateService(id, updateData, tenantId);
     res.json(successResponse(updated));
   } catch (error) {
     console.error('完整錯誤:', error);
@@ -93,11 +96,11 @@ export const updateService = async (req: Request, res: Response) => {
   }
 };
 
-// 軟刪除
 export const deleteService = async (req: Request, res: Response) => {
   try {
     const id = getNumberId(req.params.id);
-    const success = await serviceService.deleteService(id);
+    const tenantId = (req as any).tenant_id;
+    const success = await serviceService.deleteService(id, tenantId);
     if (!success) {
       return res.status(404).json(errorResponse('Service not found', 404));
     }
@@ -108,11 +111,11 @@ export const deleteService = async (req: Request, res: Response) => {
   }
 };
 
-// 恢復
 export const restoreService = async (req: Request, res: Response) => {
   try {
     const id = getNumberId(req.params.id);
-    const success = await serviceService.restoreService(id);
+    const tenantId = (req as any).tenant_id;
+    const success = await serviceService.restoreService(id, tenantId);
     if (!success) {
       return res.status(404).json(errorResponse('Service not found or not deleted', 404));
     }
@@ -122,11 +125,11 @@ export const restoreService = async (req: Request, res: Response) => {
   }
 };
 
-// 永久刪除
 export const hardDeleteService = async (req: Request, res: Response) => {
   try {
     const id = getNumberId(req.params.id);
-    const success = await serviceService.permanentlyDeleteService(id);
+    const tenantId = (req as any).tenant_id;
+    const success = await serviceService.permanentlyDeleteService(id, tenantId);
     if (!success) {
       return res.status(404).json(errorResponse('Service not found', 404));
     }

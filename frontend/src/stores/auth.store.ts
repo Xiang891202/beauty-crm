@@ -14,25 +14,44 @@ export const useAuthStore = defineStore('auth', () => {
   function setAuth(data: { user: User; token: string }) {
     const userWithRole = {
       ...data.user,
-      role: data.user.role || 'customer', // 确保用户对象有 role 属性，默认为 'customer'
+      role: data.user.role || 'customer'
     }
     user.value = userWithRole;
     token.value = data.token;
+    
+    // 寫入儲存空間
     localStorage.setItem('token', data.token);
     localStorage.setItem('user', JSON.stringify(userWithRole));
+    
     window.dispatchEvent(new Event('auth-login'));
   }
 
+
   async function login(credentials: { email: string; password: string }) {
     try {
+      // 這裡的 res 結構為：{ success: true, data: { token: '...', user: {...} } }
       const res = await loginApi(credentials.email, credentials.password);
-      setAuth(res.data);
+      
+      // 🎯 依據你提供的 JSON 結構進行精確解構
+      if (res && res.success && res.data) {
+        // 傳入內層包含 user 與 token 的物件給 setAuth
+        setAuth({
+          token: res.data.token,
+          user: res.data.user
+        });
+      } else {
+        throw new Error('登入回應格式不正確');
+      }
+      
       return res;
     } catch (error) {
       console.error('登入失敗', error);
       throw error;
     }
   }
+
+
+
 
   async function customerLogin(phone: string, password: string) {
     try {
@@ -62,12 +81,17 @@ export const useAuthStore = defineStore('auth', () => {
 
   async function restoreSession(): Promise<void> {
     const storedToken = localStorage.getItem('token');
-    if (storedToken) {
+    // 排除 token 被存成 "undefined" 字串的狀況
+    if (storedToken && storedToken !== 'undefined') { 
       token.value = storedToken;
       try {
         const res = await getProfile();
-        user.value = res.data;
-        localStorage.setItem('user', JSON.stringify(res.data));
+        
+        //  正確解析：取得真正的用戶 profile 資料
+        const userData = res.data.data || res.data;
+        
+        user.value = userData;
+        localStorage.setItem('user', JSON.stringify(userData));
       } catch (error) {
         console.error('還原 session 失敗', error);
         token.value = null;
@@ -76,6 +100,7 @@ export const useAuthStore = defineStore('auth', () => {
       }
     }
   }
+
 
   return {
     user,

@@ -15,7 +15,12 @@ export const login = async (email: string, password: string) => {
   if (!isValid) throw new Error('Invalid credentials');
 
   // 3. 產生 token
-  const token = generateToken({ id: user.id, role: user.role });
+  const token = generateToken({ 
+    id: user.id, 
+    email: user.email,        // ✅ 加上這行
+    role: user.role,  
+    tenant_id: (user as any).tenant_id,   // ← 加这个
+  });
   return { token, user };
 };
 

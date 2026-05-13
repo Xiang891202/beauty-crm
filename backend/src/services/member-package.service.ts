@@ -6,98 +6,91 @@ export const purchasePackage = async (
   package_id: string,
   purchase_date?: string,
   expiry_date?: string | null,
-  total_uses?: number
+  total_uses?: number,
+  tenantId?: number
 ) => {
-  // 1. 取得組合包模板（含品項列表，僅供快照）
-  const { data: pkg, error: pkgErr } = await supabase
+  // 1. 查詢組合包模板（加上 tenant 過濾，防止跨租户購買）
+  let pkgQuery = supabase
     .from('service_packages')
     .select('*, items:service_package_items(service_id, quantity)')
-    .eq('id', package_id)
-    .single();
+    .eq('id', package_id);
+  if (tenantId) pkgQuery = pkgQuery.eq('tenant_id', tenantId);
+  const { data: pkg, error: pkgErr } = await pkgQuery.single();
   if (pkgErr) throw new Error(pkgErr.message);
   if (!pkg) throw new Error('組合包不存在');
 
-  // 總次數 = 所有品項次數總和（依原始設計，每個品項的數量是該品項在組合包中的次數，總次數即為所有數量相加）
   const templateTotal = pkg.items.reduce((sum: number, item: any) => sum + item.quantity, 0);
   const purchaseDate = purchase_date ? new Date(purchase_date) : new Date();
   const expiry = expiry_date ? new Date(expiry_date) : null;
   const finalTotalUses = total_uses ?? templateTotal;
 
-//   console.log('pkg.items:', pkg.items);
-  // 2. 插入會員組合包記錄（不再插入品項剩餘表）
+  // 2. 插入會員組合包記錄（注入 tenant_id）
+  const insertData: any = {
+    customer_id,
+    package_id,
+    snapshot_name: pkg.name,
+    snapshot_description: pkg.description,
+    purchase_date: purchaseDate,
+    expiry_date: expiry,
+    total_uses: finalTotalUses,
+    remaining_uses: finalTotalUses,
+    status: 'active',
+  };
+  if (tenantId) insertData.tenant_id = tenantId;
+
   const { data: memberPkg, error: insertErr } = await supabase
-    .from('member_service_packages')  // 從品項表開始插入，方便關聯服務資料
-    .insert({
-      customer_id,
-      package_id,
-      snapshot_name: pkg.name,
-      snapshot_description: pkg.description,
-      purchase_date: purchaseDate,
-      expiry_date: expiry,
-      total_uses: finalTotalUses,
-      remaining_uses: finalTotalUses,
-      status: 'active',
-    })
+    .from('member_service_packages')
+    .insert(insertData)
     .select()
     .single();
   if (insertErr) throw new Error(insertErr.message);
 
-  const snapshotItems = pkg.items.map(item => ({
+  // 3. 插入快照品項
+  const snapshotItems = pkg.items.map((item: any) => ({
     member_package_id: memberPkg.id,
     service_id: item.service_id,
     original_quantity: item.quantity,
-    remaining_quantity: 0, // 總次數模式下不使用，但保留結構
-    }));
-    // await supabase.from('member_service_package_items').insert(snapshotItems);
-
-    console.log('准备插入快照，数据：', JSON.stringify(snapshotItems));
-    const { error: snapshotErr } = await supabase.from('member_service_package_items').insert(snapshotItems);
-    if (snapshotErr) {
+    remaining_quantity: 0,
+  }));
+  const { error: snapshotErr } = await supabase.from('member_service_package_items').insert(snapshotItems);
+  if (snapshotErr) {
     console.error('快照插入错误:', snapshotErr);
-    // 回滚主记录
     await supabase.from('member_service_packages').delete().eq('id', memberPkg.id);
     throw new Error('建立快照失败');
-    } else {
-    console.log('快照插入成功');
-    }
+  }
 
   return memberPkg;
 };
 
-// ==================== 查詢客戶的所有組合包（分步查詢版） ====================
-export const getCustomerPackages = async (customer_id: number) => {
-  // 1. 查主记录
-  const { data: packages, error: pkgErr } = await supabase
+// ==================== 查詢客戶的所有組合包（管理員用） ====================
+export const getCustomerPackages = async (customer_id: number, tenantId?: number) => {
+  let query = supabase
     .from('member_service_packages')
     .select('*')
     .eq('customer_id', customer_id)
     .gt('remaining_uses', 0)
     .order('created_at', { ascending: false });
+  if (tenantId) query = query.eq('tenant_id', tenantId);
+  const { data: packages, error: pkgErr } = await query;
   if (pkgErr) throw new Error(pkgErr.message);
   if (!packages) return [];
 
-  // 2. 对每个包查快照项
-  const result = await Promise.all(packages.map(async (pkg) => {
-    // 查快照项（只取 service_id 和 original_quantity）
+  const result = await Promise.all(packages.map(async (pkg: any) => {
     const { data: items, error: itemsErr } = await supabase
       .from('member_service_package_items')
       .select('service_id, original_quantity')
       .eq('member_package_id', pkg.id);
-    if (itemsErr) {
-      console.warn(`查快照失败 ${pkg.id}:`, itemsErr);
-      return { ...pkg, snapshot_items: [] };
-    }
-    if (!items.length) return { ...pkg, snapshot_items: [] };
+    if (itemsErr || !items?.length) return { ...pkg, snapshot_items: [] };
 
-    // 批量获取服务名称
-    const serviceIds = items.map(item => item.service_id);
+    const serviceIds = items.map((item: any) => item.service_id);
     const { data: services } = await supabase
       .from('services')
       .select('id, name')
       .in('id', serviceIds);
-    const serviceMap = Object.fromEntries((services || []).map(s => [s.id, s.name]));
+    const serviceMap: Record<number, string> = {};
+    (services || []).forEach((s: any) => { serviceMap[s.id] = s.name; });
 
-    const snapshot_items = items.map(item => ({
+    const snapshot_items = items.map((item: any) => ({
       service_id: item.service_id,
       original_quantity: item.original_quantity,
       service: { id: item.service_id, name: serviceMap[item.service_id] || '未知服務' }
@@ -107,18 +100,17 @@ export const getCustomerPackages = async (customer_id: number) => {
   return result;
 };
 
-// ==================== 查詢單一組合包詳細（分步查詢版） ====================
-export const getMemberPackageDetail = async (member_package_id: string) => {
-  // 主記錄
-  const { data: pkg, error: pkgErr } = await supabase
+// ==================== 查詢單一組合包詳細 ====================
+export const getMemberPackageDetail = async (member_package_id: string, tenantId?: number) => {
+  let query = supabase
     .from('member_service_packages')
     .select('*')
-    .eq('id', member_package_id)
-    .single();
+    .eq('id', member_package_id);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
+  const { data: pkg, error: pkgErr } = await query.single();
   if (pkgErr) throw new Error(pkgErr.message);
   if (!pkg) throw new Error('組合包不存在');
 
-  // 快照項
   const { data: items, error: itemsErr } = await supabase
     .from('member_service_package_items')
     .select('service_id, original_quantity')
@@ -127,16 +119,16 @@ export const getMemberPackageDetail = async (member_package_id: string) => {
     console.warn('查快照失敗:', itemsErr);
     return { ...pkg, snapshot_items: [] };
   }
-  if (!items.length) return { ...pkg, snapshot_items: [] };
+  if (!items?.length) return { ...pkg, snapshot_items: [] };
 
-  // 批量取服務名稱
-  const serviceIds = items.map(item => item.service_id);
+  const serviceIds = items.map((item: any) => item.service_id);
   const { data: services } = await supabase
     .from('services')
     .select('id, name')
     .in('id', serviceIds);
-  const serviceMap = Object.fromEntries((services || []).map(s => [s.id, s.name]));
-  const snapshot_items = items.map(item => ({
+  const serviceMap: Record<number, string> = {};
+  (services || []).forEach((s: any) => { serviceMap[s.id] = s.name; });
+  const snapshot_items = items.map((item: any) => ({
     service_id: item.service_id,
     original_quantity: item.original_quantity,
     service: { id: item.service_id, name: serviceMap[item.service_id] || '未知服務' }
@@ -144,10 +136,10 @@ export const getMemberPackageDetail = async (member_package_id: string) => {
   return { ...pkg, snapshot_items };
 };
 
-// ==================== 使用服務（扣總次數，記錄選中的品項） ====================
+// ==================== 使用服務（扣總次數） ====================
 interface UseServiceParams {
   member_package_id: string;
-  selected_service_ids: number[];   // 本次使用的服務項目ID陣列
+  selected_service_ids: number[];
   notes?: string;
   signature_url?: string;
   staff_id?: number;
@@ -155,40 +147,45 @@ interface UseServiceParams {
   gifts?: Array<{ description: string; notes?: string }>;
 }
 
-export const useService = async (params: UseServiceParams) => {
-  // 1. 查詢組合包剩餘次數
-  const { data: memberPkg, error: pkgErr } = await supabase
+export const useService = async (params: UseServiceParams, tenantId?: number) => {
+  // 1. 查詢組合包剩餘次數（限當前租戶）
+  let pkgQuery = supabase
     .from('member_service_packages')
     .select('remaining_uses, customer_id, snapshot_name')
-    .eq('id', params.member_package_id)
-    .single();
+    .eq('id', params.member_package_id);
+  if (tenantId) pkgQuery = pkgQuery.eq('tenant_id', tenantId);
+  const { data: memberPkg, error: pkgErr } = await pkgQuery.single();
   if (pkgErr || !memberPkg) throw new Error('組合包不存在');
   if (memberPkg.remaining_uses < 1) throw new Error('剩餘次數不足');
 
-  // 2. 扣減總次數 1 次
+  // 2. 扣減總次數 1 次（同樣加上 tenant 條件）
   const newRemaining = memberPkg.remaining_uses - 1;
-  const { error: updatePkgErr } = await supabase
+  let updateQuery = supabase
     .from('member_service_packages')
     .update({ remaining_uses: newRemaining })
     .eq('id', params.member_package_id);
+  if (tenantId) updateQuery = updateQuery.eq('tenant_id', tenantId);
+  const { error: updatePkgErr } = await updateQuery;
   if (updatePkgErr) throw new Error(updatePkgErr.message);
 
-  // 3. 插入使用紀錄（儲存快照品項陣列）
+  // 3. 插入使用紀錄
+  const usageData: any = {
+    customer_id: memberPkg.customer_id,
+    member_package_id: params.member_package_id,
+    service_id: null,
+    quantity: 1,
+    notes: params.notes,
+    signature_url: params.signature_url,
+    staff_id: params.staff_id,
+    created_by: params.created_by,
+    usage_date: new Date(),
+    snapshot_package_name: memberPkg.snapshot_name,
+    selected_service_ids: params.selected_service_ids,
+  };
+  if (tenantId) usageData.tenant_id = tenantId;
   const { data: usageLog, error: logErr } = await supabase
     .from('service_usage_logs')
-    .insert({
-      customer_id: memberPkg.customer_id,
-      member_package_id: params.member_package_id,
-      service_id: null,                     // 不再關聯單一服務
-      quantity: 1,
-      notes: params.notes,
-      signature_url: params.signature_url,
-      staff_id: params.staff_id,
-      created_by: params.created_by,
-      usage_date: new Date(),
-      snapshot_package_name: memberPkg.snapshot_name,
-      selected_service_ids: params.selected_service_ids,
-    })
+    .insert(usageData)
     .select()
     .single();
   if (logErr) throw new Error(logErr.message);
@@ -203,8 +200,8 @@ export const useService = async (params: UseServiceParams) => {
     if (itemsErr) console.warn('使用品項記錄失敗:', itemsErr.message);
   }
 
-  // 5. 贈品處理（若有）
-  if (params.gifts && params.gifts.length > 0) {
+  // 5. 贈品處理
+  if (params.gifts?.length) {
     const giftsToInsert = params.gifts.map(g => ({
       member_package_id: params.member_package_id,
       gift_description: g.description,
@@ -217,68 +214,59 @@ export const useService = async (params: UseServiceParams) => {
     if (giftsErr) console.warn('贈品插入失敗:', giftsErr.message);
   }
 
-    if (!params.signature_url) {
-    throw new Error('簽名為必填項目');
-    }
+  if (!params.signature_url) throw new Error('簽名為必填項目');
 
   // 6. 更新組合包狀態
   if (newRemaining === 0) {
-    await supabase
+    let statusQuery = supabase
       .from('member_service_packages')
       .update({ status: 'used_up' })
       .eq('id', params.member_package_id);
+    if (tenantId) statusQuery = statusQuery.eq('tenant_id', tenantId);
+    await statusQuery;
   }
 
   return usageLog;
 };
 
-// ==================== 查詢使用紀錄（含品項明細） ====================
-export const getUsageLogs = async (filter: { customer_id?: number; member_package_id?: string }) => {
+// ==================== 查詢使用紀錄 ====================
+export const getUsageLogs = async (filter: { customer_id?: number; member_package_id?: string }, tenantId?: number) => {
   let query = supabase
     .from('service_usage_logs')
-    .select(`
-      *,
-      items:service_usage_items(
-        service_id,
-        service:services(id, name)
-      )
-    `);
+    .select(`*, items:service_usage_items(service_id, service:services(id, name))`);
   if (filter.customer_id) query = query.eq('customer_id', filter.customer_id);
   if (filter.member_package_id) query = query.eq('member_package_id', filter.member_package_id);
+  if (tenantId) query = query.eq('tenant_id', tenantId);
   const { data, error } = await query.order('created_at', { ascending: false });
   if (error) throw new Error(error.message);
   return data || [];
 };
 
-// 查詢客戶已用完的組合包（含品項快照）
-export const getCustomerUsedPackages = async (customer_id: number) => {
-  // 1. 查主記錄
-  const { data: packages, error } = await supabase
+// ==================== 客戶已用完的組合包 ====================
+export const getCustomerUsedPackages = async (customer_id: number, tenantId?: number) => {
+  let query = supabase
     .from('member_service_packages')
     .select('*')
     .eq('customer_id', customer_id)
     .eq('status', 'used_up')
     .order('created_at', { ascending: false });
-
+  if (tenantId) query = query.eq('tenant_id', tenantId);
+  const { data: packages, error } = await query;
   if (error) throw new Error(error.message);
-  if (!packages || packages.length === 0) return [];
+  if (!packages?.length) return [];
 
-  // 2. 對每個組合包查快照品項
   const result = await Promise.all(packages.map(async (pkg: any) => {
     const { data: items } = await supabase
       .from('member_service_package_items')
       .select('service_id, original_quantity')
       .eq('member_package_id', pkg.id);
+    if (!items?.length) return { ...pkg, snapshot_items: [] };
 
-    if (!items || items.length === 0) return { ...pkg, snapshot_items: [] };
-
-    // 3. 批量獲取服務名稱
     const serviceIds = items.map((item: any) => item.service_id);
     const { data: services } = await supabase
       .from('services')
       .select('id, name')
       .in('id', serviceIds);
-
     const serviceMap: Record<number, string> = {};
     (services || []).forEach((s: any) => { serviceMap[s.id] = s.name; });
 
@@ -287,131 +275,70 @@ export const getCustomerUsedPackages = async (customer_id: number) => {
       original_quantity: item.original_quantity,
       service_name: serviceMap[item.service_id] || '未知服務',
     }));
-
     return { ...pkg, snapshot_items };
   }));
-
   return result;
 };
 
 // ==================== 人工補償：調整總剩餘次數 ====================
-// export const adjustRemaining = async (params: {
-//   member_package_id: string;
-//   delta: number;          // 正數增加，負數減少
-//   reason?: string;
-//   notes?: string;
-//   created_by?: number;
-// }) => {
-//   // 1. 查詢當前剩餘次數
-//   const { data: memberPkg, error: findErr } = await supabase
-//     .from('member_service_packages')
-//     .select('remaining_uses, customer_id, status')
-//     .eq('id', params.member_package_id)
-//     .single();
-//   if (findErr || !memberPkg) throw new Error('組合包不存在');
-
-//   const newRemaining = memberPkg.remaining_uses + params.delta;
-//   if (newRemaining < 0) throw new Error('剩餘次數不能為負數');
-
-//   // 2. 更新剩餘次數
-//   const { error: updateErr } = await supabase
-//     .from('member_service_packages')
-//     .update({ remaining_uses: newRemaining })
-//     .eq('id', params.member_package_id);
-//   if (updateErr) throw new Error(updateErr.message);
-
-//   // 3. 記錄調整日誌（可選，插入 service_usage_logs）
-//   const { error: logErr } = await supabase.from('service_usage_logs').insert({
-//     customer_id: memberPkg.customer_id,
-//     member_package_id: params.member_package_id,
-//     service_id: null,
-//     usage_date: new Date(),
-//     quantity: params.delta,
-//     notes: `人工調整：${params.reason || '無原因'}。${params.notes || ''}`,
-//     staff_id: params.created_by,
-//     created_by: params.created_by,
-//     signature_url: null,
-//     snapshot_package_name: null,
-//     selected_service_ids: [],
-//   });
-//   if (logErr) console.warn('調整日誌寫入失敗:', logErr.message);
-
-//   // 4. 更新狀態
-//   if (newRemaining === 0) {
-//     await supabase
-//       .from('member_service_packages')
-//       .update({ status: 'used_up' })
-//       .eq('id', params.member_package_id);
-//   } else if (newRemaining > 0 && memberPkg.status === 'used_up') {
-//     await supabase
-//       .from('member_service_packages')
-//       .update({ status: 'active' })
-//       .eq('id', params.member_package_id);
-//   }
-
-//   return {
-//     member_package_id: params.member_package_id,
-//     old_remaining: memberPkg.remaining_uses,
-//     new_remaining: newRemaining,
-//     delta: params.delta,
-//   };
-// };
-
-// ==================== 人工補償：調整總剩餘次數（寫入 adjustments 表） ====================
 export const adjustRemaining = async (params: {
   member_package_id: string;
-  delta: number;          // 正數增加，負數減少
+  delta: number;
   reason?: string;
   notes?: string;
   created_by?: number;
-}) => {
-  // 1. 查詢當前剩餘次數及組合包快照名稱
-  const { data: memberPkg, error: findErr } = await supabase
+}, tenantId?: number) => {
+  let pkgQuery = supabase
     .from('member_service_packages')
-    .select('remaining_uses, customer_id, status, snapshot_name')
-    .eq('id', params.member_package_id)
-    .single();
+    .select('remaining_uses, customer_id, status, snapshot_name, tenant_id')
+    .eq('id', params.member_package_id);
+  if (tenantId) pkgQuery = pkgQuery.eq('tenant_id', tenantId);
+  const { data: memberPkg, error: findErr } = await pkgQuery.single();
   if (findErr || !memberPkg) throw new Error('組合包不存在');
 
   const newRemaining = memberPkg.remaining_uses + params.delta;
   if (newRemaining < 0) throw new Error('剩餘次數不能為負數');
 
-  // 2. 更新剩餘次數
-  const { error: updateErr } = await supabase
+  let updateQuery = supabase
     .from('member_service_packages')
     .update({ remaining_uses: newRemaining })
     .eq('id', params.member_package_id);
+  if (tenantId) updateQuery = updateQuery.eq('tenant_id', tenantId);
+  const { error: updateErr } = await updateQuery;
   if (updateErr) throw new Error(updateErr.message);
 
-  // 3. 記錄調整日誌到 adjustments 表（不再寫入 service_usage_logs）
-  const { error: adjErr } = await supabase.from('adjustments').insert({
+  // 插入 adjustments 記錄
+  const adjData: any = {
     member_package_id: params.member_package_id,
     adjustment_type: params.delta > 0 ? 'INCREASE' : 'DECREASE',
     amount: Math.abs(params.delta),
     reason: params.reason,
     notes: params.notes,
     created_by: params.created_by,
-    package_snapshot_name: memberPkg.snapshot_name,   // 务必包含
-    customer_id: memberPkg.customer_id,               // 👈 加上这行
+    package_snapshot_name: memberPkg.snapshot_name,
+    customer_id: memberPkg.customer_id,
     member_service_id: null,
-    created_at: new Date().toISOString(), // 添加这一行
-  });
-  if (adjErr) {
-    console.error('調整日誌寫入失敗:', adjErr);
-    // 不回滾剩餘次數，僅記錄錯誤
-  }
+    created_at: new Date().toISOString(),
+  };
+  if (tenantId) adjData.tenant_id = tenantId;
+  const { error: adjErr } = await supabase.from('adjustments').insert(adjData);
+  if (adjErr) console.error('調整日誌寫入失敗:', adjErr);
 
-  // 4. 更新組合包狀態
+  // 更新狀態
   if (newRemaining === 0) {
-    await supabase
+    let statusQuery = supabase
       .from('member_service_packages')
       .update({ status: 'used_up' })
       .eq('id', params.member_package_id);
+    if (tenantId) statusQuery = statusQuery.eq('tenant_id', tenantId);
+    await statusQuery;
   } else if (newRemaining > 0 && memberPkg.status === 'used_up') {
-    await supabase
+    let statusQuery = supabase
       .from('member_service_packages')
       .update({ status: 'active' })
       .eq('id', params.member_package_id);
+    if (tenantId) statusQuery = statusQuery.eq('tenant_id', tenantId);
+    await statusQuery;
   }
 
   return {
@@ -422,7 +349,7 @@ export const adjustRemaining = async (params: {
   };
 };
 
-// ==================== 贈品管理（保持不變） ====================
+// ==================== 贈品管理（不變） ====================
 export const getAllGifts = async (filter?: { member_package_id?: string; is_redeemed?: boolean }) => {
   let query = supabase.from('package_gifts').select('*, member_service_packages(customer_id, snapshot_name)');
   if (filter?.member_package_id) query = query.eq('member_package_id', filter.member_package_id);

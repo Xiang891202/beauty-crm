@@ -1,4 +1,4 @@
-import  http  from '../http';
+import http from '../http';
 
 export interface DashboardStats {
   totalMembers: number;
@@ -15,6 +15,8 @@ export interface DashboardStats {
 }
 
 export const getDashboardStats = async () => {
+  // http.get 已經回傳了 res.data，其結構直接就是：{ success: boolean; data: DashboardStats }
   const response = await http.get<{ success: boolean; data: DashboardStats }>('/admin/stats');
-  return response;
+  return response; 
 };
+

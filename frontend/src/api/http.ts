@@ -20,17 +20,25 @@ const instance: AxiosInstance = axios.create({
 });
 
 // 請求攔截器
+// src/api/http.ts 請求攔截器部分修正
 instance.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
-  if (token) config.headers.Authorization = `Bearer ${token}`;
+  
+  // 🎯 核心防禦：必須確保 token 存在、不是空值，且絕對不能是 "undefined" 或 "null" 字串
+  if (token && token !== 'undefined' && token !== 'null' && token.trim() !== '') {
+    config.headers.Authorization = `Bearer ${token}`;
+  } else {
+    // 如果 token 是壞的，直接把這個 header 刪除，不讓錯誤的 Bearer undefined 送到後端
+    delete config.headers.Authorization;
+  }
   
   // 對 POST / PATCH 請求加入 idempotency key
   if (config.method === 'post' || config.method === 'patch') {
     config.headers['X-Idempotency-Key'] = uuidv4();
   }
-  
   return config;
 });
+
 
 // 響應攔截器：直接返回 res.data（解包）
 instance.interceptors.response.use(

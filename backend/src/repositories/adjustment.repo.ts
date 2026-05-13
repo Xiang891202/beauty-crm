@@ -2,20 +2,25 @@ import prisma from '../config/prisma';
 import { Adjustment } from '../types';
 
 export class AdjustmentRepository {
-  async create(data: Omit<Adjustment, 'id' | 'created_at'>): Promise<Adjustment> {
+  // ✅ 将 data 参数类型从 Omit<Adjustment, ...> 改为 any
+  async create(data: any, tenantId?: number): Promise<Adjustment> {
     const createData: any = {
-      // customer_id: data.customer_id ?? null,
       member_service_id: data.member_service_id ?? null,
       adjustment_type: data.adjustment_type,
       amount: data.amount,
       reason: data.reason ?? null,
       created_by: data.created_by ?? null,
+      customer_id: data.customer_id ?? null,
+      created_at: new Date().toISOString(),
     };
+    if (tenantId) createData.tenant_id = tenantId;
     return await prisma.adjustment.create({ data: createData });
   }
 
-  async findById(id: number): Promise<Adjustment | null> {
-    return await prisma.adjustment.findUnique({ where: { id } });
+  async findById(id: number, tenantId?: number): Promise<Adjustment | null> {
+    const where: any = { id };
+    if (tenantId) where.tenant_id = tenantId;
+    return await prisma.adjustment.findUnique({ where });
   }
 
   async findAll(filter: {
@@ -26,11 +31,13 @@ export class AdjustmentRepository {
     endDate?: Date;
     page?: number;
     limit?: number;
+    tenantId?: number;
   }): Promise<{ items: Adjustment[]; total: number }> {
-    const { customer_id, member_service_id, adjustment_type, startDate, endDate, page = 1, limit = 20 } = filter;
+    const { customer_id, member_service_id, adjustment_type, startDate, endDate, page = 1, limit = 20, tenantId } = filter;
     const skip = (page - 1) * limit;
 
     const where: any = {};
+    if (tenantId) where.tenant_id = tenantId;
     if (customer_id) where.customer_id = customer_id;
     if (member_service_id) where.member_service_id = member_service_id;
     if (adjustment_type) where.adjustment_type = adjustment_type;
