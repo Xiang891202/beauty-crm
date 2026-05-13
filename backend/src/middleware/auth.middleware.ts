@@ -6,16 +6,16 @@ import jwt from 'jsonwebtoken';
 
 //身分驗證中間件
 export const authenticate = (req: Request, res: Response, next: NextFunction) => {
-  console.log('Authorization header:', req.headers.authorization); // 👈 加這行
+  // console.log('Authorization header:', req.headers.authorization); // 👈 加這行
 
   const authHeader = req.headers.authorization;
   if (!authHeader) {
-    console.log('⛔ 沒有 token'); // 👈 加這行
+    // console.log('⛔ 沒有 token'); // 👈 加這行
     return res.status(401).json({ error: 'No token provided' });
   }
 
   const token = authHeader.split(' ')[1];
-  console.log('Token received:', token?.substring(0, 30) + '...'); // 👈 加這行
+  // console.log('Token received:', token?.substring(0, 30) + '...'); // 👈 加這行
   try {
     const decoded = verifyToken(token);
     (req as any).user = decoded;

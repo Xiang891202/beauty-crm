@@ -29,7 +29,7 @@ describe('member.service', () => {
   describe('addMember', () => {
     it('新增會員，密碼會經 bcrypt hash', async () => {
       db.customer.create.mockResolvedValue({ id: 1, name: '王美美', phone: '0912' });
-      const result = await memberService.addMember({ name: '王美美', phone: '0912', password: '123' });
+      const result = await memberService.addMember({ name: '王美美', phone: '0912', password: '123' }, 1);
       expect(result.id).toBe(1);
     });
   });

@@ -21,7 +21,7 @@ jest.mock('@/config/prisma', () => ({
     $transaction: jest.fn(),
   },
 }));
-jest.mock('@/lib/supabase'); // 自動 mock
+jest.mock('@/lib/supabase');
 
 const mockSupabaseFrom = supabase.from as jest.Mock;
 
@@ -53,7 +53,7 @@ describe('ServiceLogService', () => {
     mockSupabaseFrom.mockImplementation(() => chainWithThen({ data: [], error: null }));
   });
 
-  // 原有的 create / getById / update 測試（保留）
+  // ========== create 測試 ==========
   describe('create', () => {
     it('无 member_service_id 时直接调用 repository 的 create', async () => {
       const data = {
@@ -67,8 +67,12 @@ describe('ServiceLogService', () => {
       };
       const expected = { id: 1, ...data };
       mockRepo.create.mockResolvedValue(expected as any);
-      const result = await service.create(data);
-      expect(mockRepo.create).toHaveBeenCalledWith(data);
+
+      // 多租戶改造後，調用時傳入 tenantId（這裡用 1 模擬）
+      const result = await service.create(data, 1);
+
+      // 放寬驗證：允許 repository 收到第二個參數（tenantId）
+      expect(mockRepo.create).toHaveBeenCalledWith(data, 1);
       expect(result).toEqual(expected);
     });
 
@@ -108,6 +112,7 @@ describe('ServiceLogService', () => {
     });
   });
 
+  // ========== getById ==========
   describe('getById', () => {
     it('返回記錄', async () => {
       mockRepo.findById.mockResolvedValue({ id: 1 } as any);
@@ -121,60 +126,69 @@ describe('ServiceLogService', () => {
     });
   });
 
+  // ========== updateNotes ==========
   describe('updateNotes', () => {
     it('更新 notes', async () => {
       mockRepo.update.mockResolvedValue({ id: 1, notes: 'new' } as any);
-      const result = await service.updateNotes(1, 'new');
-      expect(mockRepo.update).toHaveBeenCalledWith(1, { notes: 'new' });
+      const result = await service.updateNotes(1, 'new', 1); // 傳入 tenantId
+      expect(mockRepo.update).toHaveBeenCalledWith(1, { notes: 'new' }, 1);
       expect(result.notes).toBe('new');
     });
   });
 
+  // ========== updateSignature ==========
   describe('updateSignature', () => {
     it('更新签名', async () => {
       mockRepo.update.mockResolvedValue({ id: 1, signature_url: 'url' } as any);
-      const result = await service.updateSignature(1, 'url');
-      expect(mockRepo.update).toHaveBeenCalledWith(1, { signature_url: 'url' });
+      const result = await service.updateSignature(1, 'url', 1); // 傳入 tenantId
+      expect(mockRepo.update).toHaveBeenCalledWith(1, { signature_url: 'url' }, 1);
       expect(result.signature_url).toBe('url');
     });
   });
 
   // ========== getUnifiedList 測試 ==========
   describe('getUnifiedList', () => {
-    const fakeTrad = [{
-      id: 1, used_at: new Date(), notes: '', signature_url: null,
-      customer: { id: 1, name: '王美美' },
-      service: { id: 10, name: '臉部保濕' },
-      member_service: { remaining_sessions: 2, total_sessions: 5 },
-    }];
-    const fakePkg = [{
-      id: 100, created_at: new Date().toISOString(), notes: 'pkg', signature_url: 'sig',
-      snapshot_package_name: '美白組', customer_id: 1, customer: { name: '王美美' },
-      items: [{ service: { name: '去角質' } }],
-      member_service_packages: [{ snapshot_name: '美白組' }],
-    }];
+  const fakeTrad = [{
+    id: 1, used_at: new Date(), notes: '', signature_url: null,
+    customer: { id: 1, name: '王美美' },
+    service: { id: 10, name: '臉部保濕' },
+    member_service: { remaining_sessions: 2, total_sessions: 5 },
+  }];
+  const fakePkg = [{
+    id: 100, created_at: new Date().toISOString(), notes: 'pkg', signature_url: 'sig',
+    snapshot_package_name: '美白組', customer_id: 1, customer: { name: '王美美' },
+    items: [{ service: { name: '去角質' } }],
+    member_service_packages: [{ snapshot_name: '美白組' }],
+  }];
 
-    beforeEach(() => {
-      (prisma.serviceLog.findMany as jest.Mock).mockResolvedValue(fakeTrad);
-      (prisma.serviceLog.count as jest.Mock).mockResolvedValue(1);
-    });
-
-    it('合併傳統與組合包', async () => {
-      // supabase 三次呼叫：package logs, gifts lookups (兩次)
-      mockSupabaseFrom
-        .mockReturnValueOnce(chainWithThen({ data: fakePkg, count: 1, error: null }))   // service_usage_logs
-        .mockReturnValueOnce(chainWithThen({ data: [], error: null }))                 // gifts lookup 1
-        .mockReturnValueOnce(chainWithThen({ data: [], count: 0, error: null }));      // gift logs
-
-      const result = await service.getUnifiedList({ page: 1, limit: 10 });
-      expect(result.total).toBe(2);
-      expect(result.items.length).toBeGreaterThan(0);
-    });
-
-    it('客戶名稱搜尋無結果時提前返回空', async () => {
-      mockSupabaseFrom.mockReturnValueOnce(chainWithThen({ data: [], error: null }));   // customers query
-      const result = await service.getUnifiedList({ page: 1, limit: 10, customer_name: '不存在' });
-      expect(result.items).toEqual([]);
-    });
+  beforeEach(() => {
+    (prisma.serviceLog.findMany as jest.Mock).mockResolvedValue(fakeTrad);
+    (prisma.serviceLog.count as jest.Mock).mockResolvedValue(1);
   });
+
+  it('合併傳統與組合包', async () => {
+    mockSupabaseFrom
+      .mockReturnValueOnce(chainWithThen({ data: fakePkg, count: 1, error: null }))
+      .mockReturnValueOnce(chainWithThen({ data: [], error: null }))
+      .mockReturnValueOnce(chainWithThen({ data: [], count: 0, error: null }));
+
+    const result = await service.getUnifiedList({ page: 1, limit: 10 });
+    expect(result.total).toBe(2);
+    expect(result.items.length).toBeGreaterThan(0);
+  });
+
+  it('客戶名稱搜尋無結果時提前返回空', async () => {
+    mockSupabaseFrom.mockReturnValueOnce(chainWithThen({ data: [], error: null }));
+
+    const result = await service.getUnifiedList({
+      page: 1,
+      limit: 10,
+      customer_name: '不存在',
+      tenant_id: 1,
+    } as any);   // ✅ 關鍵修改
+
+    expect(result.items).toEqual([]);
+    expect(prisma.serviceLog.findMany).not.toHaveBeenCalled();
+  });
+});
 });
