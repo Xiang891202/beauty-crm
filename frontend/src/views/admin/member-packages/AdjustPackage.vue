@@ -10,7 +10,7 @@
           required
         />
         <BaseInput v-model="form.reason" label="調整原因" placeholder="例如：補償、扣回" />
-        <BaseTextarea v-model="form.notes" label="備註" :rows="2" />
+        <!-- <BaseTextarea v-model="form.notes" label="備註" :rows="2" /> -->
         <div class="flex justify-end gap-3 pt-4">
           <BaseButton variant="outline" @click="$emit('close')">取消</BaseButton>
           <BaseButton type="submit" :loading="loading">確認調整</BaseButton>
