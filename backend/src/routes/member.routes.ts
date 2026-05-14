@@ -5,14 +5,11 @@ import { roleMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
-// 公開路由（所有人可查看會員列表與詳情）
-router.get('/', memberController.getMembers);
-router.get('/:id/services', memberController.getMemberServices);
-router.get('/:id', memberController.getMember);
+// 所有路由都需要认证
+router.use(authenticate);
 
-// 需要管理員權限的路由
-router.post('/', authenticate, roleMiddleware(['admin']), memberController.createMember);
-router.put('/:id', authenticate, roleMiddleware(['admin']), memberController.updateMember);
-router.delete('/:id', authenticate, roleMiddleware(['admin']), memberController.deleteMember);
+router.post('/', roleMiddleware(['admin']), memberController.createMember);
+router.put('/:id', roleMiddleware(['admin']), memberController.updateMember);
+router.delete('/:id', roleMiddleware(['admin']), memberController.deleteMember);
 
 export default router;
