@@ -43,6 +43,7 @@ import { getServices, type Service } from '@/api/modules/service';
 import BaseInput from '@/components/common/BaseInput.vue';
 import BaseTextarea from '@/components/common/BaseTextarea.vue';
 import BaseButton from '@/components/common/BaseButton.vue';
+import axios, { AxiosError } from 'axios';
 
 const route = useRoute();
 const router = useRouter();
@@ -85,7 +86,7 @@ const loadPackage = async () => {
     form.durationDaysDisplay = data.duration_days ?? null;
     if (data.items && Array.isArray(data.items)) {
       form.items = data.items.map((item: any) => ({
-        service_id: item.service.id || item.service?.id,   // ✅ 修正此處
+        service_id: item.service?.id ?? null,
         quantity: item.quantity,
       }));
     } else {
@@ -101,31 +102,55 @@ const loadPackage = async () => {
 };
 
 const loadServices = async () => {
-  const res = await getServices(); // Promise<ApiResponse<Service[]>>
-  services.value = res.data; // res.data 就是 Service[]
+  try {
+    const res = await getServices();
+    services.value = res.data;
+  } catch (err) {
+    console.error('載入服務項目失敗:', err);
+  }
 };
 
 const submit = async () => {
-  // 準備提交的資料，必須包含 is_active
+  // 1. 过滤掉未选择服务或数量为0的项目
+  const validItems = form.items.filter(item => item.service_id !== null && item.quantity > 0);
+  
+  // 2. 检查是否有重复的服务ID
+  const serviceIds = validItems.map(item => item.service_id);
+  const hasDuplicate = serviceIds.some((id, index) => serviceIds.indexOf(id) !== index);
+  
+  if (hasDuplicate) {
+    alert('組合包中不允許包含重複的服務項目，請檢查並刪除重複項。');
+    return; // 阻止提交
+  }
+  
+  // 3. 构建提交数据
   const payload = {
     name: form.name,
     description: form.description,
     price: form.price,
     duration_days: getDurationDays(),
-    is_active: true, // 新增或編輯時預設啟用，可依需求調整
-    items: form.items
-      .filter(item => item.service_id !== null && item.quantity > 0)
-      .map(item => ({
-        service_id: item.service_id!,
-        quantity: item.quantity,
-      })),
+    is_active: true,
+    items: validItems.map(item => ({
+      service_id: item.service_id!,
+      quantity: item.quantity,
+    })),
   };
-  if (isEdit) {
-    await updatePackage(id, payload);
-  } else {
-    await createPackage(payload);
+  
+  try {
+    if (isEdit) {
+      await updatePackage(id, payload);
+    } else {
+      await createPackage(payload);
+    }
+    router.push('/admin/service-packages');
+  } catch (err) {
+    console.error('儲存失敗:', err);
+    if (err instanceof AxiosError && err.response?.data?.error?.includes('duplicate key')) {
+      alert('服務項目重複，請移除重複項後再試。');
+    } else {
+      alert('儲存失敗，請稍後再試。');
+    }
   }
-  router.push('/admin/service-packages');
 };
 
 onMounted(async () => {
