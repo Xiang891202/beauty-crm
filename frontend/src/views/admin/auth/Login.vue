@@ -1,53 +1,54 @@
 <template>
-  <div class="login-container">
-    <form @submit.prevent="handleLogin">
-      <h2>管理員登入</h2>
-      <div>
-        <label>郵箱</label>
-        <input v-model="email" type="email" required />
-      </div>
-      <div>
-        <label>密碼</label>
-        <input v-model="password" type="password" required />
-      </div>
-      <button type="submit" :disabled="loading">登入</button>
-      <div v-if="error" class="error">{{ error }}</div>
-    </form>
-  </div>
+  <BackendHealthCheck>
+    <div class="login-container">
+      <form @submit.prevent="handleLogin">
+        <h2>管理員登入</h2>
+        <div>
+          <label>郵箱</label>
+          <input v-model="email" type="email" required />
+        </div>
+        <div>
+          <label>密碼</label>
+          <input v-model="password" type="password" required />
+        </div>
+        <button type="submit" :disabled="loading">登入</button>
+        <div v-if="error" class="error">{{ error }}</div>
+      </form>
+    </div>
+  </BackendHealthCheck>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth.store';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
+import BackendHealthCheck from '@/components/common/BackendHealthCheck.vue'
 
-const router = useRouter();
-const authStore = useAuthStore();
+const router = useRouter()
+const authStore = useAuthStore()
 
-const email = ref('');
-const password = ref('');
-const loading = ref(false);
-const error = ref('');
+const email = ref('')
+const password = ref('')
+const loading = ref(false)
+const error = ref('')
 
 const handleLogin = async () => {
-  loading.value = true;
-  error.value = '';
+  loading.value = true
+  error.value = ''
   try {
-    await authStore.login({ email: email.value, password: password.value });
-    // 登入成功後，authStore 已儲存 token 和 user，且 user.role 應為 admin
-    // 可添加額外檢查確保是 admin
+    await authStore.login({ email: email.value, password: password.value })
     if (authStore.user?.role !== 'admin') {
-      error.value = '只有管理員帳號可以登入後台';
-      await authStore.logout(); // 清除錯誤登入的 token
-      return;
+      error.value = '只有管理員帳號可以登入後台'
+      await authStore.logout()
+      return
     }
-    router.push('/admin/dashboard');
+    router.push('/admin/dashboard')
   } catch (err: any) {
-    error.value = err.message || '登入失敗，請檢查帳號密碼';
+    error.value = err.message || '登入失敗，請檢查帳號密碼'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 </script>
 
 <style scoped>

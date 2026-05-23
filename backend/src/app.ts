@@ -9,6 +9,16 @@ import statsRoutes from './routes/stats.routes';
 
 const app = express();
 
+// 健康檢查（不需要任何中間件）
+app.get('/api/health', (req, res) => {
+  res.status(200).json({ status: 'ok' });
+});
+
+// 臨時改為模擬異常
+// app.get('/api/health', (req, res) => {
+//   res.status(503).json({ error: 'Service Unavailable' });
+// });
+
 app.use(cors());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));

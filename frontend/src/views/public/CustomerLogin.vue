@@ -1,61 +1,64 @@
 <template>
-  <div class="customer-login">
-    <div class="card">
-      <h2>🌸 會員登入</h2>
-      <form @submit.prevent="handleLogin">
-        <BaseInput v-model="phone" label="手機號碼" placeholder="0912345678" />
-        <BaseInput 
-          v-model="password" 
-          label="密碼" 
-          type="password" 
-          :error="passwordError"
-          @blur="validatePassword"
-        />
-        <BaseButton :loading="loading" block>登入</BaseButton>
-        <p v-if="error" class="error">{{ error }}</p>
-      </form>
+  <BackendHealthCheck>
+    <div class="customer-login">
+      <div class="card">
+        <h2>🌸 會員登入</h2>
+        <form @submit.prevent="handleLogin">
+          <BaseInput v-model="phone" label="手機號碼" placeholder="0912345678" />
+          <BaseInput 
+            v-model="password" 
+            label="密碼" 
+            type="password" 
+            :error="passwordError"
+            @blur="validatePassword"
+          />
+          <BaseButton :loading="loading" block>登入</BaseButton>
+          <p v-if="error" class="error">{{ error }}</p>
+        </form>
+      </div>
     </div>
-  </div>
+  </BackendHealthCheck>
 </template>
 
 <script setup lang="ts">
-import { ref } from 'vue';
-import { useRouter } from 'vue-router';
-import { useAuthStore } from '@/stores/auth.store';
-import BaseInput from '@/components/common/BaseInput.vue';
-import BaseButton from '@/components/common/BaseButton.vue';
+import { ref } from 'vue'
+import { useRouter } from 'vue-router'
+import { useAuthStore } from '@/stores/auth.store'
+import BaseInput from '@/components/common/BaseInput.vue'
+import BaseButton from '@/components/common/BaseButton.vue'
+import BackendHealthCheck from '@/components/common/BackendHealthCheck.vue'
 
-const auth = useAuthStore();
-const router = useRouter();
-const phone = ref('');
-const password = ref('');
-const loading = ref(false);
-const error = ref('');
-const passwordError = ref('');
+const auth = useAuthStore()
+const router = useRouter()
+const phone = ref('')
+const password = ref('')
+const loading = ref(false)
+const error = ref('')
+const passwordError = ref('')
 
 const validatePassword = () => {
   if (password.value.length > 0 && password.value.length < 8) {
-    passwordError.value = '密碼至少需要 8 個字元';
+    passwordError.value = '密碼至少需要 8 個字元'
   } else {
-    passwordError.value = '';
+    passwordError.value = ''
   }
-};
+}
 
 const handleLogin = async () => {
-  validatePassword();
-  if (passwordError.value) return;
+  validatePassword()
+  if (passwordError.value) return
   
-  loading.value = true;
-  error.value = '';
+  loading.value = true
+  error.value = ''
   try {
-    await auth.customerLogin(phone.value, password.value);
-    router.push('/my-services');
+    await auth.customerLogin(phone.value, password.value)
+    router.push('/my-services')
   } catch (err: any) {
-    error.value = err.message || '登入失敗，請檢查手機號碼或密碼';
+    error.value = err.message || '登入失敗，請檢查手機號碼或密碼'
   } finally {
-    loading.value = false;
+    loading.value = false
   }
-};
+}
 </script>
 
 <!-- <style scoped>
